@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tiendita Express</title>
+
+  <!-- ✅ Corrección 1: Enlace correcto -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <h1 class="logo">Tiendita Express</h1>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#inicio">Inicio</a></li>
+          <li><a href="#categorias">Categorías</a></li>
+          <li><a href="#contacto">Contacto</a></li>
+          <li><a href="#carrito">Carrito</a></li>
+          <li><a href="#favoritos">Favoritos</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section id="inicio">
+    <div class="slider">
+      <div class="slide active">
+        <img src="img/banner1.jpg" alt="Promo 1">
+      </div>
+      <div class="slide">
+        <img src="img/banner2.jpg" alt="Promo 2">
+      </div>
+      <button class="prev" onclick="changeSlide(-1)">&#10094;</button>
+      <button class="next" onclick="changeSlide(1)">&#10095;</button>
+    </div>
+  </section>
+
+  <section id="categorias" class="container">
+    <h2>Categorías</h2>
+    <div class="category-grid">
+      <div class="category-card" data-category="playera">
+        <img src="img/playera.jpg" alt="Playeras">
+        <h3>Playeras</h3>
+      </div>
+      <div class="category-card" data-category="sudadera">
+        <img src="img/sudadera.jpg" alt="Sudaderas">
+        <h3>Sudaderas</h3>
+      </div>
+      <div class="category-card" data-category="gorra">
+        <img src="img/gorra.jpg" alt="Gorras">
+        <h3>Gorras</h3>
+      </div>
+    </div>
+  </section>
+
+  <section id="productos" class="container">
+    <h2>Productos</h2>
+    <div id="product-list" class="product-grid"></div>
+  </section>
+
+  <section id="contacto" class="container">
+    <h2>Contacto</h2>
+    <iframe
+      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3755.7!2d-101.18!3d19.72!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sTecNM%20Morelia!5e0!3m2!1ses!2smx!4v1234"
+      width="100%"
+      height="300"
+      style="border:0;"   <!--✅ Corrección 5 -->
+      allowfullscreen=""
+      loading="lazy">
+    </iframe>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 Tiendita Express. Todos los derechos reservados.</p>
+  </footer>
+
+  <!-- ✅ Corrección 4: Se agregó cart.js -->
+  <script src="js/cart.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/slider.js"></script>
+  <script src="js/favorite.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

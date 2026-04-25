@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - CodeTranslate AI</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Estilos específicos para tablas de admin */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            background-color: #1e293b;
+            color: var(--primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        tr:hover {
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+
+        .admin-section {
+            background: var(--dark);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-admin {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .badge-user {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 40px;">
+            <div class="logo" style="margin:0">
+                <div class="logo-icon">🛡️</div>
+                <h1>Panel Admin</h1>
+            </div>
+            <a href="Traductor.html" class="action-btn secondary">← Volver al Traductor</a>
+        </header>
+
+        <div class="admin-section">
+            <h2>👥 Usuarios Registrados</h2>
+            <div style="overflow-x:auto;">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Fecha Registro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" style="text-align:center">Cargando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h2>🌍 Actividad Global de Traducciones</h2>
+            <div style="overflow-x:auto;">
+                <table id="trans-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Origen</th>
+                            <th>Destino</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" style="text-align:center">Cargando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const API_URL = 'http://localhost:3000';
+
+        async function loadAdminData() {
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+
+            console.log('1. Iniciando carga de Admin...');
+            console.log('   - Token existe:', !!token);
+            console.log('   - Rol detectado:', role);
+
+            // Seguridad en Frontend
+            if (role !== 'admin') {
+                alert('⛔ Acceso denegado: Se requieren permisos de Administrador.');
+                window.location.href = 'Traductor.html';
+                return;
+            }
+
+            try {
+                console.log('2. Enviando petición al servidor...');
+                const res = await fetch(`${API_URL}/admin/data`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                console.log('3. Respuesta del servidor:', res.status);
+
+                if (res.status === 401 || res.status === 403) {
+                    throw new Error('Sesión inválida o permisos insuficientes (Error 403/401)');
+                }
+
+                const data = await res.json();
+                console.log('4. Datos recibidos:', data);
+
+                if (data.success) {
+                    // 1. Renderizar Usuarios
+                    const usersBody = document.querySelector('#users-table tbody');
+                    if (data.users.length === 0) {
+                        usersBody.innerHTML = '<tr><td colspan="4" style="text-align:center">No hay usuarios</td></tr>';
+                    } else {
+                        usersBody.innerHTML = data.users.map(u => `
+                            <tr>
+                                <td>#${u.id}</td>
+                                <td style="font-weight:bold; color:white;">${u.username}</td>
+                                <td><span class="badge ${u.role === 'admin' ? 'badge-admin' : 'badge-user'}">${u.role}</span></td>
+                                <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('');
+                    }
+
+                    // 2. Renderizar Traducciones
+                    const transBody = document.querySelector('#trans-table tbody');
+                    if (data.translations.length === 0) {
+                        transBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay traducciones registradas</td></tr>';
+                    } else {
+                        transBody.innerHTML = data.translations.map(t => `
+                            <tr>
+                                <td>#${t.id}</td>
+                                <td>${t.username ? `<span style="color:#6ee7b7">${t.username}</span>` : '<span style="color:#94a3b8; font-style:italic">Anónimo</span>'}</td>
+                                <td>${t.source_lang}</td>
+                                <td>${t.target_lang}</td>
+                                <td>${new Date(t.created_at).toLocaleString()}</td>
+                            </tr>
+                        `).join('');
+                    }
+                } else {
+                    console.error('Error lógico:', data.error);
+                    alert('Error del servidor: ' + data.error);
+                }
+            } catch (error) {
+                console.error('💥 ERROR CRÍTICO:', error);
+                alert('No se pudieron cargar los datos. Revisa la consola (F12) para más detalles.\n\nCausa probable: ' + error.message);
+            }
+        }
+
+        // Cargar al iniciar
+        document.addEventListener('DOMContentLoaded', loadAdminData);
+    </script>
+</body>
+
+</html>

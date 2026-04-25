@@ -1,0 +1,32 @@
+/* Reset CSS básico para todos los elementos */
+
+*{
+    margin: 0; /* Elimina márgenes por defecto */
+    padding: 0; /* Elimina relleno por defecto */
+    box-sizing: border-box; /* Asegura que el padding y border se incluyan en el ancho y alto total */
+
+}
+
+/*Fondo animado*/
+body, html {
+    height: 100%;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #545454, #03172c);
+    /* Animación de fondo */
+    background-size: 200% 200%; /* Doble tamaño para la animación */
+    animation: gradientBG 10s ease infinite; /* Duración y tipo de animación */
+} 
+
+.content {
+    text-align: center;
+    padding: 40px 50px;
+    background: rgba(255, 255, 255, 0.1); /* Fondo blanco con 80% de opacidad */
+    backdrop-filter: blur(10px); /* Efecto de desenfoque */
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
+    animation: fadeIn 1.2s ease-in-out; /* Animación de aparición */
+}

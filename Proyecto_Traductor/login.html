@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - CodeTranslate AI</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="container" style="max-width: 400px; margin-top: 50px;">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">&#60;/&#62;</div>
+                <h1>Login</h1>
+            </div>
+        </header>
+
+        <div class="code-panel" style="padding: 30px;">
+            <form id="login-form">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; color:#94a3b8; margin-bottom:5px">Usuario</label>
+                    <input type="text" id="username" class="model-selector" required style="width:100%">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; color:#94a3b8; margin-bottom:5px">Contraseña</label>
+                    <input type="password" id="password" class="model-selector" required style="width:100%">
+                </div>
+                <button type="submit" class="translate-btn" style="width:100%">Entrar 🔐</button>
+            </form>
+            <p style="text-align: center; margin-top: 15px; color: #94a3b8;">
+                ¿No tienes cuenta? <a href="register.html" style="color: var(--primary);">Regístrate</a>
+            </p>
+            <p style="text-align: center; margin-top: 10px;">
+                <a href="Traductor.html" style="color: var(--gray);">← Volver al traductor</a>
+            </p>
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+</body>
+
+</html>

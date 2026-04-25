@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeTranslate AI - Traductor de Código</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <div class="logo" style="margin: 0;">
+                <div class="logo-icon">&#60;/&#62;</div>
+                <h1 style="font-size: 1.8rem; margin: 0;">CodeTranslate AI</h1>
+            </div>
+
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <button id="history-btn" class="action-btn secondary" style="display: none;">
+                    📜 Historial
+                </button>
+
+                <div id="user-display" style="color: white; font-size: 0.9rem;"></div>
+            </div>
+        </header>
+
+        <main>
+            <div class="translator-container">
+                <div class="code-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">Código Fuente</div>
+                        <div class="custom-select">
+                            <select class="language-selector" id="source-language">
+                                <option value="python">Python</option>
+                                <option value="java">Java</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="cpp">C++</option>
+                                <option value="csharp">C#</option>
+                                <option value="php">PHP</option>
+                                <option value="ruby">Ruby</option>
+                            </select>
+                            <div class="selected-icon" id="source-icon">🐍</div>
+                        </div>
+                    </div>
+                    <textarea class="code-area" id="source-code" placeholder="Pega tu código aquí...">def saludar(nombre):
+    print(f"Hola, {nombre}!")
+
+saludar("Mundo")</textarea>
+                    <div class="panel-footer">
+                        <button class="action-btn secondary" id="clear-source"><span>🗑️</span> Limpiar</button>
+                        <button class="action-btn secondary" id="paste-source"><span>📋</span> Pegar</button>
+                    </div>
+                </div>
+
+                <div class="code-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">Código Traducido <span class="ai-badge">AI</span></div>
+                        <div class="custom-select">
+                            <select class="language-selector" id="target-language">
+                                <option value="java">Java</option>
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="cpp">C++</option>
+                                <option value="csharp">C#</option>
+                                <option value="php">PHP</option>
+                                <option value="ruby">Ruby</option>
+                            </select>
+                            <div class="selected-icon" id="target-icon">☕</div>
+                        </div>
+                    </div>
+                    <textarea class="code-area" id="target-code" placeholder="El código traducido aparecerá aquí..."
+                        readonly></textarea>
+                    <div class="panel-footer">
+                        <button class="action-btn secondary" id="clear-target"><span>🗑️</span> Limpiar</button>
+                        <button class="action-btn" id="copy-target"><span>📄</span> Copiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls" style="flex-direction: column; align-items: center; gap: 15px;">
+                <div class="settings-panel">
+                    <div class="setting-item" style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #94a3b8; font-size: 0.9rem;">🧠 Modelo
+                            de Inteligencia Artificial:</label>
+                        <select id="ai-model" class="model-selector">
+                            <option value="llama-3.1-8b-instant">⚡ Llama 3.1 8B (Más Rápido)</option>
+                            <option value="llama-3.3-70b-versatile">🧠 Llama 3.3 70B (Más Inteligente)</option>
+                            <option value="mixtral-8x7b-32768">🌪️ Mixtral 8x7B (Equilibrado)</option>
+                            <option value="gemma2-9b-it">💎 Google Gemma 2 9B (Alternativa)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="comments-toggle" checked>
+                            <span class="toggle-label">📝 Incluir comentarios explicativos</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="button" class="translate-btn" id="translate-btn">
+                    <span>🔄</span> Traducir Código
+                </button>
+            </div>
+
+            <div class="changes-panel" id="changes-panel">
+                <div class="changes-header">
+                    <h3>📋 Cambios Realizados</h3>
+                    <button class="close-changes" id="close-changes">✕</button>
+                </div>
+                <div class="changes-content" id="changes-content"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>CodeTranslate AI - Proyecto de Programación Web &copy; 2023</p>
+        </footer>
+    </div>
+
+    <div id="history-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📜 Historial de Traducciones</h2>
+                <button id="close-history" class="close-modal-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="history-list" class="history-list">
+                    <p class="loading-text">Cargando historial...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/scripts.js"></script>
+</body>
+
+</html>

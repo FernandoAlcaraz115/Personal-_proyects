@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mi Tiendita</title>
+    <meta name="description" content="Tienda demo: productos, carrito y favoritos.">
+    <link rel="stylesheet" href="CSS/styles.css">
+    
+    <!-- Preload de imágenes críticas -->
+    <link rel="preload" href="img/banner1.jpg" as="image">
+    <link rel="preload" href="img/banner2.jpg" as="image">
+    <link rel="preload" href="img/banner4.jpg" as="image">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1 class="logo">Fernando Store</h1>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#inicio">Inicio</a></li>
+                    <li>
+                        <a href="#" id="cart-link" aria-controls="cart-modal" aria-expanded="false">
+                            Carrito (<span id="cart-count">0</span>)
+                        </a>
+                    </li>
+                    <li><a href="#Categorias">Categorías</a></li>
+                    <li><a href="#Contacto">Contacto</a></li>
+                    <li><a href="#Nosotros">Nosotros</a></li>
+                    <li><a href="#IniciarSesion">Iniciar sesión</a></li>
+                    <li><a href="#Registrarse">Registrarse</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Modal del carrito -->
+    <div id="cart-modal-overlay" class="cart-modal-overlay" aria-hidden="true">
+        <div id="cart-modal" class="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+            <div class="cart-modal-header">
+                <h2 id="cart-title">Tu Carrito</h2>
+                <button id="cart-close-btn" class="cart-close-btn" type="button" aria-label="Cerrar carrito">✕</button>
+            </div>
+            <div id="cart-container" class="cart-container">
+                <!-- cart.js renderiza el contenido aquí -->
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <section id="inicio">
+            <div class="Slider">
+                <div class="slide active">
+                    <img src="img/banner6.png" alt="Promoción 1" width="1200" height="400" loading="eager">
+                </div>
+                <div class="slide">
+                    <img src="img/banner4.jpg" alt="Promoción 2" width="1200" height="400" loading="lazy">
+                </div>
+                <div class="slide">
+                    <img src="img/banner1.jpg" alt="Promoción 3" width="1200" height="400" loading="lazy">
+                </div>
+                <button class="prev" type="button" aria-label="Anterior">❮</button>
+                <button class="next" type="button" aria-label="Siguiente">❯</button>
+            </div>
+        </section>
+
+        <section id="Categorias" class="container">
+            <h2>Categorías</h2>
+            <div class="category-grid">
+                <div class="category-card" data-category="playera" role="button" tabindex="0">
+                    <img src="img/playera.jpg" alt="Playeras">
+                    <h3>Playeras</h3>
+                </div>
+                <div class="category-card" data-category="sudadera" role="button" tabindex="0">
+                    <img src="img/sudadera.jpg" alt="Sudaderas">
+                    <h3>Sudaderas</h3>
+                </div>
+                <div class="category-card" data-category="pantalon" role="button" tabindex="0">
+                    <img src="img/pantalon.jpg" alt="Pantalones">
+                    <h3>Pantalones</h3>
+                </div>
+                <div class="category-card" data-category="accesorios" role="button" tabindex="0">
+                    <img src="img/accesorios.jpg" alt="Accesorios">
+                    <h3>Accesorios</h3>
+                </div>
+                <div class="category-card" data-category="calzado" role="button" tabindex="0">
+                    <img src="img/calzado.jpg" alt="Calzado">
+                    <h3>Calzado</h3>
+                </div>
+            </div>
+        </section>
+
+        <section id="productos" class="container">
+            <h2>Productos</h2>
+            <div id="product-grid" class="product-grid"></div>
+        </section>
+
+        <section id="Nosotros" class="container">
+            <h2>Nosotros</h2>
+            <p>Somos una tienda en línea dedicada a ofrecer ropa y accesorios de moda para todas las edades. Nuestra misión es proporcionar productos de alta calidad a precios accesibles, con un enfoque en la satisfacción del cliente y la experiencia de compra.</p>
+        </section>
+
+        <section id="Contacto" class="container">
+            <h2>Contacto</h2>
+            <p>WhatsApp: <a href="https://wa.me/524434053416" target="_blank" rel="noopener noreferrer">4434053416</a></p>
+
+            <div class="map" style="margin-top:12px;">
+                <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3853.563860749962!2d-101.18840038911105!3d19.722938581542767!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x842d0e40be8f4d3b%3A0xf001c256ae856856!2sInstituto%20Tecnol%C3%B3gico%20de%20Morelia!5e1!3m2!1ses-419!2smx!4v1759857595573!5m2!1ses-419!2smx"
+                    width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2024 Mi tiendita. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Chatbot -->
+    <div id="chatbot-container" class="chatbot-container">
+        <div id="chatbot-header" class="chatbot-header">
+            <h3>🤖 Asistente Virtual</h3>
+            <button id="chatbot-close" class="chatbot-close">−</button>
+        </div>
+        <div id="chatbot-messages" class="chatbot-messages">
+            <div class="chat-message bot-message">
+                <div class="message-content">
+                    ¡Hola! 👋 Soy tu asistente virtual. ¿En qué puedo ayudarte?
+                </div>
+                <div class="message-time" id="current-time"></div>
+            </div>
+        </div>
+        <div class="chatbot-input">
+            <input type="text" id="chatbot-input" placeholder="Escribe tu mensaje..." maxlength="200">
+            <button id="chatbot-send">➤</button>
+        </div>
+    </div>
+
+    <button id="chatbot-toggle" class="chatbot-toggle">
+        💬
+    </button>
+
+    <script src="JS/slider.js" defer></script>
+    <script src="JS/products.js" defer></script>
+    <script src="JS/favorites.js" defer></script>
+    <script src="JS/cart.js" defer></script>
+    <script src="JS/main.js" defer></script>
+    <script src="JS/chatbot.js" defer></script>
+</body>
+</html>
