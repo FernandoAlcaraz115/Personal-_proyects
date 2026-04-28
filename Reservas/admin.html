@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin · Fernando Travels</title>
+  <style>
+    :root {
+      --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Consolas', 'SF Mono', monospace;
+      --radius-lg: 14px;
+      --radius-md: 8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: var(--font-sans); background: #f1f5f9; min-height: 100vh; }
+
+    /* ── Navbar ── */
+    .navbar {
+      background: linear-gradient(135deg, #0f172a, #1e3a5f);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(0,0,0,.3);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .navbar-brand { color: #fff; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .navbar-brand span { font-size: 1.3rem; }
+    .navbar-badge { font-size: 10px; background: #2563eb; color: #fff; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: .05em; }
+    .navbar-right { display: flex; align-items: center; gap: 12px; }
+    .navbar-user { font-size: 13px; color: rgba(255,255,255,.7); }
+    .btn-logout {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,.1); }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .stat-icon { font-size: 2rem; line-height: 1; }
+    .stat-label { font-size: 12px; color: #64748b; font-weight: 500; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .06em; }
+    .stat-value { font-size: 1.75rem; font-weight: 700; color: #1e293b; }
+
+    /* ── Section card ── */
+    .section-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .section-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .section-title { font-size: 13px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+    .section-count { font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+    .btn-refresh {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      background: #f8fafc;
+      color: #475569;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-refresh:hover { background: #f1f5f9; }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #f8fafc; }
+    th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+    td { padding: 10px 14px; color: #1e293b; border-top: 1px solid #f1f5f9; }
+    tbody tr:hover { background: #f8fafc; }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .badge-admin { background: #ede9fe; color: #7c3aed; }
+    .badge-user  { background: #f0f9ff; color: #0369a1; }
+    .badge-ok    { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+    .mono { font-family: var(--font-mono); font-size: 12px; color: #64748b; }
+    .text-muted { color: #94a3b8; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .fw-600 { font-weight: 600; }
+
+    /* Empty state */
+    .empty { padding: 2.5rem; text-align: center; color: #94a3b8; font-size: 14px; }
+
+    @media (max-width: 700px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .navbar { padding: 0 1rem; }
+      .container { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <span>✈️</span> Fernando Travels
+      <span class="navbar-badge">ADMIN</span>
+    </div>
+    <div class="navbar-right">
+      <span class="navbar-user" id="navNombre">—</span>
+      <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div>
+          <div class="stat-label">Reservas totales</div>
+          <div class="stat-value" id="statReservas">—</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div>
+          <div class="stat-label">Usuarios registrados</div>
+          <div class="stat-value" id="statUsuarios">—</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div>
+          <div class="stat-label">Ingresos totales</div>
+          <div class="stat-value" id="statIngresos">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reservas -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          📋 Viajes agendados
+          <span class="section-count" id="countReservas">0</span>
+        </div>
+        <button class="btn-refresh" onclick="cargarDatos()">↻ Actualizar</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>Cliente</th>
+              <th>Correo</th>
+              <th>Tour</th>
+              <th class="text-center">Pers.</th>
+              <th class="text-right">Total</th>
+              <th>Fecha del tour</th>
+              <th>Reservado el</th>
+            </tr>
+          </thead>
+          <tbody id="tbReservas">
+            <tr><td colspan="8" class="empty">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Usuarios -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          👥 Usuarios registrados
+          <span class="section-count" id="countUsuarios">0</span>
+        </div>
+        <button class="btn-refresh" onclick="cargarDatos()">↻ Actualizar</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th class="text-center">Rol</th>
+              <th>Registrado el</th>
+              <th class="text-center">Reservas</th>
+            </tr>
+          </thead>
+          <tbody id="tbUsuarios">
+            <tr><td colspan="5" class="empty">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API = 'http://localhost:3000/api';
+
+    // Verificar que sea admin
+    const token = localStorage.getItem('ft_token');
+    const user  = JSON.parse(localStorage.getItem('ft_user') || 'null');
+    if (!token || !user || user.role !== 'admin') {
+      window.location.href = 'login.html';
+    } else {
+      document.getElementById('navNombre').textContent = user.nombre;
+    }
+
+    function authHeaders() {
+      return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+
+    function formatFecha(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString('es-MX', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
+
+    function esc(s) {
+      return String(s ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function cargarDatos() {
+      try {
+        const [resReservas, resUsuarios] = await Promise.all([
+          fetch(`${API}/admin/reservas`, { headers: authHeaders() }),
+          fetch(`${API}/admin/usuarios`, { headers: authHeaders() }),
+        ]);
+
+        if (resReservas.status === 401 || resUsuarios.status === 401) {
+          localStorage.clear();
+          window.location.href = 'login.html';
+          return;
+        }
+
+        const reservas = await resReservas.json();
+        const usuarios = await resUsuarios.json();
+
+        renderReservas(reservas);
+        renderUsuarios(usuarios, reservas);
+        renderStats(reservas, usuarios);
+      } catch {
+        document.getElementById('tbReservas').innerHTML =
+          '<tr><td colspan="8" class="empty">No se pudo conectar al servidor.</td></tr>';
+        document.getElementById('tbUsuarios').innerHTML =
+          '<tr><td colspan="5" class="empty">No se pudo conectar al servidor.</td></tr>';
+      }
+    }
+
+    function renderStats(reservas, usuarios) {
+      const ingresos = reservas.reduce((s, r) => s + Number(r.total), 0);
+      document.getElementById('statReservas').textContent = reservas.length;
+      document.getElementById('statUsuarios').textContent = usuarios.length;
+      document.getElementById('statIngresos').textContent = '$' + ingresos.toLocaleString('es-MX');
+    }
+
+    function renderReservas(reservas) {
+      document.getElementById('countReservas').textContent = reservas.length;
+      if (!reservas.length) {
+        document.getElementById('tbReservas').innerHTML =
+          '<tr><td colspan="8" class="empty">Sin reservas registradas.</td></tr>';
+        return;
+      }
+      document.getElementById('tbReservas').innerHTML = reservas.map(r => `
+        <tr>
+          <td><span class="mono">${esc(r.folio)}</span></td>
+          <td class="fw-600">${esc(r.nombre)}</td>
+          <td class="text-muted">${esc(r.email)}</td>
+          <td>${esc(r.tour)}</td>
+          <td class="text-center">${r.personas}</td>
+          <td class="text-right fw-600">$${Number(r.total).toLocaleString('es-MX')}</td>
+          <td>${esc(r.fecha_viaje) || '—'}</td>
+          <td class="text-muted">${formatFecha(r.created_at)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderUsuarios(usuarios, reservas) {
+      document.getElementById('countUsuarios').textContent = usuarios.length;
+      if (!usuarios.length) {
+        document.getElementById('tbUsuarios').innerHTML =
+          '<tr><td colspan="5" class="empty">Sin usuarios registrados.</td></tr>';
+        return;
+      }
+      document.getElementById('tbUsuarios').innerHTML = usuarios.map(u => {
+        const numReservas = reservas.filter(r => r.email === u.email).length;
+        const badgeClass  = u.role === 'admin' ? 'badge-admin' : 'badge-user';
+        const roleLabel   = u.role === 'admin' ? 'Admin' : 'Usuario';
+        return `
+          <tr>
+            <td class="fw-600">${esc(u.nombre)}</td>
+            <td class="text-muted">${esc(u.email)}</td>
+            <td class="text-center"><span class="badge ${badgeClass}">${roleLabel}</span></td>
+            <td class="text-muted">${formatFecha(u.created_at)}</td>
+            <td class="text-center">
+              ${numReservas > 0
+                ? `<span class="badge badge-ok">${numReservas}</span>`
+                : '<span class="text-muted">0</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function logout() {
+      localStorage.removeItem('ft_token');
+      localStorage.removeItem('ft_user');
+      window.location.href = 'login.html';
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>

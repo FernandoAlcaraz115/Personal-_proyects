@@ -63,11 +63,11 @@ const requireAdmin = (req, res, next) => {
 
 app.post('/auth/register', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        if (!username || !password) return res.status(400).json({ error: 'Faltan datos' });
+        const { username, email, password } = req.body;
+        if (!username || !email || !password) return res.status(400).json({ error: 'Faltan datos' });
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(password, salt);
-        const newUser = await createUser(username, hash);
+        const newUser = await createUser(username, email, hash);
         res.json({ success: true, message: 'Usuario creado', user: newUser });
     } catch (error) { res.status(400).json({ success: false, error: error.message }); }
 });

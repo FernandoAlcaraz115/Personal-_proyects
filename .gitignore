@@ -1,15 +1,25 @@
-# Secrets y variables de entorno
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 .env
-*.env
-
-# Node modules
-node_modules/
-
-# Bases de datos locales
 *.db
-*.sqlite
+*.sqlite3
+venv/
+.venv/
 
-# Archivos del sistema
+# Node / React
+node_modules/
+dist/
+.cache/
+
+# IDEs
+.vs/
+.vscode/
+*.slnx
+
+# OS
 desktop.ini
 .DS_Store
 Thumbs.db

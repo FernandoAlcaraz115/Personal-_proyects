@@ -1,43 +1,270 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - CodeTranslate AI</title>
-    <link rel="stylesheet" href="css/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso · CodeTranslate AI</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .auth-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .auth-container { width: 100%; max-width: 420px; }
+
+    .auth-header { text-align: center; margin-bottom: 2rem; }
+    .auth-logo-icon { font-size: 3rem; color: var(--primary); display: block; margin-bottom: 0.5rem; }
+    .auth-title {
+      font-size: 1.75rem;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.25rem;
+    }
+    .auth-subtitle { color: var(--gray); font-size: 0.9rem; }
+
+    .auth-card {
+      background-color: var(--dark);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+      border: 1px solid #334155;
+    }
+
+    /* Tabs */
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--gray);
+      transition: all .2s;
+    }
+    .tab-btn.active {
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      color: white;
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 13px; font-weight: 500; color: #94a3b8; display: block; margin-bottom: 5px; }
+    .form-input {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      color: var(--light);
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 6px;
+      padding: 10px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+    .form-input::placeholder { color: #475569; }
+
+    .auth-btn {
+      width: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(37,99,235,.35);
+      transition: all .2s;
+      margin-top: 6px;
+    }
+    .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,.45); }
+    .auth-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    /* Alert */
+    .auth-alert {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .auth-alert.danger  { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.3);  color: #f87171; }
+    .auth-alert.success { background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3); color: #34d399; }
+
+    .auth-footer { text-align: center; margin-top: 1.25rem; font-size: 13px; color: var(--gray); }
+    .auth-footer a { color: var(--primary); text-decoration: none; font-weight: 500; }
+    .auth-footer a:hover { text-decoration: underline; }
+  </style>
 </head>
-
 <body>
-    <div class="container" style="max-width: 400px; margin-top: 50px;">
-        <header>
-            <div class="logo">
-                <div class="logo-icon">&#60;/&#62;</div>
-                <h1>Login</h1>
-            </div>
-        </header>
+  <div class="auth-wrapper">
+    <div class="auth-container">
 
-        <div class="code-panel" style="padding: 30px;">
-            <form id="login-form">
-                <div style="margin-bottom: 15px;">
-                    <label style="display:block; color:#94a3b8; margin-bottom:5px">Usuario</label>
-                    <input type="text" id="username" class="model-selector" required style="width:100%">
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <label style="display:block; color:#94a3b8; margin-bottom:5px">Contraseña</label>
-                    <input type="password" id="password" class="model-selector" required style="width:100%">
-                </div>
-                <button type="submit" class="translate-btn" style="width:100%">Entrar 🔐</button>
-            </form>
-            <p style="text-align: center; margin-top: 15px; color: #94a3b8;">
-                ¿No tienes cuenta? <a href="register.html" style="color: var(--primary);">Regístrate</a>
-            </p>
-            <p style="text-align: center; margin-top: 10px;">
-                <a href="Traductor.html" style="color: var(--gray);">← Volver al traductor</a>
-            </p>
+      <header class="auth-header">
+        <span class="auth-logo-icon">&#60;/&#62;</span>
+        <h1 class="auth-title">CodeTranslate AI</h1>
+        <p class="auth-subtitle">Traduce código entre lenguajes con IA</p>
+      </header>
+
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="tab-btn active" id="tabLogin"    onclick="showTab('login')">Iniciar sesión</button>
+          <button class="tab-btn"        id="tabRegister" onclick="showTab('register')">Registrarse</button>
         </div>
-    </div>
-    <script src="js/auth.js"></script>
-</body>
 
+        <div id="alerta" class="auth-alert"></div>
+
+        <!-- Login -->
+        <div id="formLogin">
+          <div class="form-group">
+            <label class="form-label" for="loginUser">Usuario</label>
+            <input type="text" id="loginUser" class="form-input" placeholder="tu_usuario" autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginPass">Contraseña</label>
+            <input type="password" id="loginPass" class="form-input" placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <button class="auth-btn" id="btnLogin" onclick="login()">Entrar 🔐</button>
+        </div>
+
+        <!-- Register -->
+        <div id="formRegister" style="display:none;">
+          <div class="form-group">
+            <label class="form-label" for="regUser">Usuario</label>
+            <input type="text" id="regUser" class="form-input" placeholder="ej. fernando123" autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="regEmail">Correo electrónico</label>
+            <input type="email" id="regEmail" class="form-input" placeholder="tu@correo.com" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="regPass">Contraseña</label>
+            <input type="password" id="regPass" class="form-input" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="regPass2">Confirmar contraseña</label>
+            <input type="password" id="regPass2" class="form-input" placeholder="Repite tu contraseña" autocomplete="new-password">
+          </div>
+          <button class="auth-btn" id="btnRegister" onclick="register()">Crear cuenta ✨</button>
+        </div>
+      </div>
+
+      <p class="auth-footer">
+        <a href="Traductor.html">← Volver al traductor</a>
+      </p>
+
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000';
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      const role = localStorage.getItem('role');
+      window.location.href = role === 'admin' ? 'admin.html' : 'Traductor.html';
+    }
+
+    function showTab(tab) {
+      document.getElementById('formLogin').style.display    = tab === 'login'    ? 'block' : 'none';
+      document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+      hideAlerta();
+    }
+
+    function showAlerta(tipo, msg) {
+      const el = document.getElementById('alerta');
+      el.className = `auth-alert ${tipo}`;
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function hideAlerta() { document.getElementById('alerta').style.display = 'none'; }
+
+    async function login() {
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPass').value;
+      if (!username || !password) return showAlerta('danger', 'Completa todos los campos.');
+
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true; btn.textContent = 'Entrando...';
+
+      try {
+        const res  = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        localStorage.setItem('token',    data.token);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('role',     data.role);
+        window.location.href = data.role === 'admin' ? 'admin.html' : 'Traductor.html';
+      } catch (err) {
+        showAlerta('danger', err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Entrar 🔐';
+      }
+    }
+
+    async function register() {
+      const username = document.getElementById('regUser').value.trim();
+      const email    = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPass').value;
+      const pass2    = document.getElementById('regPass2').value;
+
+      if (!username || !email || !password) return showAlerta('danger', 'Completa todos los campos.');
+      if (password !== pass2)   return showAlerta('danger', 'Las contraseñas no coinciden.');
+      if (password.length < 6)  return showAlerta('danger', 'La contraseña debe tener al menos 6 caracteres.');
+
+      const btn = document.getElementById('btnRegister');
+      btn.disabled = true; btn.textContent = 'Creando cuenta...';
+
+      try {
+        const res  = await fetch(`${API_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        showAlerta('success', '¡Cuenta creada exitosamente! Ahora inicia sesión.');
+        showTab('login');
+      } catch (err) {
+        showAlerta('danger', err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Crear cuenta ✨';
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const loginVisible = document.getElementById('formLogin').style.display !== 'none';
+      loginVisible ? login() : register();
+    });
+  </script>
+</body>
 </html>

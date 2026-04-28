@@ -15,17 +15,20 @@ pool.connect((err) => {
 });
 
 // --- USUARIOS ---
-async function createUser(username, passwordHash) {
+async function createUser(username, email, passwordHash) {
     const query = `
-        INSERT INTO users (username, password_hash, role)
-        VALUES ($1, $2, 'user')
-        RETURNING id, username, role, created_at
+        INSERT INTO users (username, email, password_hash, role)
+        VALUES ($1, $2, $3, 'user')
+        RETURNING id, username, email, role, created_at
     `;
     try {
-        const res = await pool.query(query, [username, passwordHash]);
+        const res = await pool.query(query, [username, email, passwordHash]);
         return res.rows[0];
     } catch (err) {
-        if (err.code === '23505') throw new Error('El usuario ya existe');
+        if (err.code === '23505') {
+            if (err.constraint && err.constraint.includes('email')) throw new Error('El correo ya está registrado');
+            throw new Error('El usuario ya existe');
+        }
         throw err;
     }
 }
@@ -38,7 +41,7 @@ async function findUserByUsername(username) {
 
 // --- ADMINISTRACIÓN ---
 async function getAllUsers() {
-    const query = `SELECT id, username, role, created_at FROM users ORDER BY id ASC`;
+    const query = `SELECT id, username, email, role, created_at FROM users ORDER BY id ASC`;
     const res = await pool.query(query);
     return res.rows;
 }

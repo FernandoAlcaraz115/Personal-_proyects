@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso · Fernando Travels</title>
+  <style>
+    :root {
+      --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --radius-lg: 14px;
+      --radius-md: 8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 45%, #075985 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .wrapper { width: 100%; max-width: 420px; }
+
+    /* Header */
+    .page-header {
+      text-align: center;
+      color: #fff;
+      margin-bottom: 1.75rem;
+    }
+    .page-header .icon { font-size: 2.8rem; display: block; margin-bottom: 0.5rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,.4)); }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.3rem; }
+    .page-header p  { font-size: 0.9rem; color: rgba(255,255,255,.6); }
+
+    /* Card */
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 30px 60px rgba(0,0,0,.35);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: #f1f5f9;
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+      color: #64748b;
+      transition: all .2s;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: #1e293b;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 14px; }
+    label { font-size: 13px; font-weight: 500; color: #64748b; display: block; margin-bottom: 5px; }
+    input {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      color: #1e293b;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+    input::placeholder { color: #94a3b8; }
+
+    /* Button */
+    .btn-primary {
+      width: 100%;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 11px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37,99,235,.35);
+      transition: all .2s;
+      margin-top: 6px;
+    }
+    .btn-primary:hover { background: linear-gradient(135deg,#1d4ed8,#1e40af); box-shadow: 0 6px 18px rgba(37,99,235,.45); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    /* Alert */
+    .alert {
+      display: none;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .alert.danger  { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+    .alert.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+
+    /* Footer */
+    .footer-link { text-align: center; margin-top: 1.25rem; font-size: 13px; color: #94a3b8; }
+    .footer-link a { color: #2563eb; text-decoration: none; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header class="page-header">
+      <span class="icon">✈️</span>
+      <h1>Fernando Travels</h1>
+      <p>Accede a tu cuenta para reservar</p>
+    </header>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab-btn active" id="tabLogin"    onclick="showTab('login')">Iniciar sesión</button>
+        <button class="tab-btn"        id="tabRegister" onclick="showTab('register')">Registrarse</button>
+      </div>
+
+      <div id="alerta" class="alert"></div>
+
+      <!-- Login -->
+      <div id="formLogin">
+        <div class="form-group">
+          <label for="loginEmail">Correo electrónico</label>
+          <input type="email" id="loginEmail" placeholder="tu@correo.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="loginPass">Contraseña</label>
+          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="btnLogin" onclick="login()">Entrar</button>
+      </div>
+
+      <!-- Register -->
+      <div id="formRegister" style="display:none;">
+        <div class="form-group">
+          <label for="regNombre">Nombre completo</label>
+          <input type="text" id="regNombre" placeholder="Ej. María González" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="regEmail">Correo electrónico</label>
+          <input type="email" id="regEmail" placeholder="tu@correo.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="regPass">Contraseña</label>
+          <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="regPass2">Confirmar contraseña</label>
+          <input type="password" id="regPass2" placeholder="Repite tu contraseña" autocomplete="new-password">
+        </div>
+        <button class="btn-primary" id="btnRegister" onclick="register()">Crear cuenta</button>
+      </div>
+    </div>
+
+    <p class="footer-link">¿Necesitas ayuda? <a href="mailto:fernando@travels.com">Contáctanos</a></p>
+  </div>
+
+  <script>
+    const API = 'http://localhost:3000/api';
+
+    // Redirigir si ya está autenticado
+    const token = localStorage.getItem('ft_token');
+    if (token) {
+      const u = JSON.parse(localStorage.getItem('ft_user') || '{}');
+      window.location.href = u.role === 'admin' ? 'admin.html' : 'reserva_tour_agencia_viajes.html';
+    }
+
+    function showTab(tab) {
+      document.getElementById('formLogin').style.display    = tab === 'login'    ? 'block' : 'none';
+      document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+      hideAlerta();
+    }
+
+    function showAlerta(tipo, msg) {
+      const el = document.getElementById('alerta');
+      el.className = `alert ${tipo}`;
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function hideAlerta() {
+      document.getElementById('alerta').style.display = 'none';
+    }
+
+    function saveSession(data) {
+      localStorage.setItem('ft_token', data.token);
+      localStorage.setItem('ft_user', JSON.stringify({ nombre: data.nombre, email: data.email, role: data.role }));
+    }
+
+    async function login() {
+      const email    = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPass').value;
+      if (!email || !password) return showAlerta('danger', 'Completa todos los campos.');
+
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true; btn.textContent = 'Entrando...';
+
+      try {
+        const res  = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        saveSession(data);
+        window.location.href = data.role === 'admin' ? 'admin.html' : 'reserva_tour_agencia_viajes.html';
+      } catch (err) {
+        showAlerta('danger', err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Entrar';
+      }
+    }
+
+    async function register() {
+      const nombre   = document.getElementById('regNombre').value.trim();
+      const email    = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPass').value;
+      const pass2    = document.getElementById('regPass2').value;
+
+      if (!nombre || !email || !password) return showAlerta('danger', 'Completa todos los campos.');
+      if (password !== pass2) return showAlerta('danger', 'Las contraseñas no coinciden.');
+
+      const btn = document.getElementById('btnRegister');
+      btn.disabled = true; btn.textContent = 'Creando cuenta...';
+
+      try {
+        const res  = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        saveSession(data);
+        window.location.href = data.role === 'admin' ? 'admin.html' : 'reserva_tour_agencia_viajes.html';
+      } catch (err) {
+        showAlerta('danger', err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Crear cuenta';
+      }
+    }
+
+    // Enter key support
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const loginVisible = document.getElementById('formLogin').style.display !== 'none';
+      loginVisible ? login() : register();
+    });
+  </script>
+</body>
+</html>
