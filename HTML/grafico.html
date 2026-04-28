@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NFA: r = (ab)⁺ c (de)*</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'JetBrains Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            color: #58a6ff;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #8b949e;
+            margin-bottom: 24px;
+        }
+
+        .regex-display {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 28px;
+            margin-bottom: 28px;
+            font-size: 1.15rem;
+            color: #ffa657;
+            letter-spacing: 0.05em;
+        }
+
+        svg {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+        }
+
+        .state circle {
+            fill: #1c2128;
+            stroke: #58a6ff;
+            stroke-width: 2;
+        }
+
+        .state.start circle {
+            stroke: #3fb950;
+        }
+
+        .state.accept circle {
+            stroke: #f78166;
+        }
+
+        .state.accept .inner {
+            fill: none;
+            stroke: #f78166;
+            stroke-width: 1.5;
+        }
+
+        .state text {
+            fill: #e6edf3;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        .label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            fill: #e6edf3;
+        }
+
+        .label.epsilon {
+            fill: #bc8cff;
+            font-size: 12px;
+        }
+
+        .label.hi {
+            fill: #ffa657;
+        }
+
+        .section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            fill: #484f58;
+            text-anchor: middle;
+        }
+
+        .legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: #8b949e;
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Autómata Finito (NFA)</h1>
+    <div class="subtitle">Construcción de Thompson</div>
+    <div class="regex-display">r = (ab)⁺ c (de)*</div>
+
+    <!--
+  ESTADOS:
+  q0 — inicio, start de (ab)+
+  q1 — tras leer 'a'
+  q2 — tras leer 'b'  → ε back to q0 (permite el +) OR ε to q3
+  q3 — listo para leer 'c'
+  q4 — tras leer 'c', inicio de (de)*
+  q5 — tras leer 'd'
+  q6 — tras leer 'e' [ACCEPT] → ε back to q4 (loop)
+       q4 también es accept (cero repeticiones de de)
+ 
+  Layout (horizontal):
+  q0(80) -a-> q1(200) -b-> q2(320) -ε-> q3(440) -c-> q4(560) -d-> q5(680) -e-> q6(800)
+  q2 -ε back to q0 (loop arc above)
+  q6 -ε back to q4 (loop arc below)
+  q4, q6 = accept states
+-->
+
+    <svg width="860" height="320" viewBox="0 0 860 320">
+        <defs>
+            <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0,8 3,0 6" fill="#8b949e" />
+            </marker>
+            <marker id="ah-eps" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0,8 3,0 6" fill="#bc8cff" />
+            </marker>
+            <marker id="ah-hi" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0,8 3,0 6" fill="#ffa657" />
+            </marker>
+        </defs>
+
+        <!-- Section backgrounds -->
+        <rect x="35" y="60" width="330" height="190" rx="10" fill="none" stroke="#21262d" stroke-width="1" />
+        <text x="200" y="50" class="section-label">(ab)⁺</text>
+
+        <rect x="415" y="60" width="80" height="190" rx="10" fill="none" stroke="#21262d" stroke-width="1" />
+        <text x="455" y="50" class="section-label">c</text>
+
+        <rect x="535" y="60" width="295" height="190" rx="10" fill="none" stroke="#21262d" stroke-width="1" />
+        <text x="683" y="50" class="section-label">(de)*</text>
+
+        <!-- Entry arrow -->
+        <line x1="5" y1="155" x2="52" y2="155" stroke="#ffa657" stroke-width="1.8" marker-end="url(#ah-hi)" />
+
+        <!-- ── STATES ── -->
+
+        <!-- q0 start -->
+        <g class="state start">
+            <circle cx="75" cy="155" r="24" />
+            <text x="75" y="155">q₀</text>
+        </g>
+
+        <!-- q1 -->
+        <g class="state">
+            <circle cx="215" cy="155" r="24" />
+            <text x="215" y="155">q₁</text>
+        </g>
+
+        <!-- q2 -->
+        <g class="state">
+            <circle cx="345" cy="155" r="24" />
+            <text x="345" y="155">q₂</text>
+        </g>
+
+        <!-- q3 -->
+        <g class="state">
+            <circle cx="455" cy="155" r="24" />
+            <text x="455" y="155">q₃</text>
+        </g>
+
+        <!-- q4 accept (0 repetitions of de is OK) -->
+        <g class="state accept">
+            <circle cx="575" cy="155" r="24" />
+            <circle class="inner" cx="575" cy="155" r="18" />
+            <text x="575" y="155">q₄</text>
+        </g>
+
+        <!-- q5 -->
+        <g class="state">
+            <circle cx="700" cy="155" r="24" />
+            <text x="700" y="155">q₅</text>
+        </g>
+
+        <!-- q6 accept -->
+        <g class="state accept">
+            <circle cx="820" cy="155" r="24" />
+            <circle class="inner" cx="820" cy="155" r="18" />
+            <text x="820" y="155">q₆</text>
+        </g>
+
+        <!-- ── TRANSITIONS ── -->
+
+        <!-- q0 -a-> q1 -->
+        <line x1="99" y1="155" x2="191" y2="155" stroke="#ffa657" stroke-width="1.8" marker-end="url(#ah-hi)" />
+        <text x="140" y="145" class="label hi">a</text>
+
+        <!-- q1 -b-> q2 -->
+        <line x1="239" y1="155" x2="321" y2="155" stroke="#ffa657" stroke-width="1.8" marker-end="url(#ah-hi)" />
+        <text x="275" y="145" class="label hi">b</text>
+
+        <!-- q2 -ε-> q0 (loop back, arc above) -->
+        <path d="M333 132 Q210 60 87 132" fill="none" stroke="#bc8cff" stroke-width="1.8" stroke-dasharray="5,3"
+            marker-end="url(#ah-eps)" />
+        <text x="205" y="72" class="label epsilon">ε</text>
+
+        <!-- q2 -ε-> q3 (forward) -->
+        <path d="M369 155 L431 155" fill="none" stroke="#bc8cff" stroke-width="1.8" stroke-dasharray="5,3"
+            marker-end="url(#ah-eps)" />
+        <text x="396" y="145" class="label epsilon">ε</text>
+
+        <!-- q3 -c-> q4 -->
+        <line x1="479" y1="155" x2="551" y2="155" stroke="#ffa657" stroke-width="1.8" marker-end="url(#ah-hi)" />
+        <text x="511" y="145" class="label hi">c</text>
+
+        <!-- q4 -d-> q5 -->
+        <line x1="599" y1="155" x2="676" y2="155" stroke="#ffa657" stroke-width="1.8" marker-end="url(#ah-hi)" />
+        <text x="633" y="145" class="label hi">d</text>
+
+        <!-- q5 -e-> q6 -->
+        <line x1="724" y1="155" x2="796" y2="155" stroke="#ffa657" stroke-width="1.8" marker-end="url(#ah-hi)" />
+        <text x="756" y="145" class="label hi">e</text>
+
+        <!-- q6 -ε-> q4 (loop back, arc below) -->
+        <path d="M808 178 Q695 250 587 178" fill="none" stroke="#bc8cff" stroke-width="1.8" stroke-dasharray="5,3"
+            marker-end="url(#ah-eps)" />
+        <text x="695" y="258" class="label epsilon">ε</text>
+
+    </svg>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-dot" style="border-color:#3fb950"></div>
+            Estado inicial
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="border-color:#f78166"></div>
+            Estado de aceptación
+        </div>
+        <div class="legend-item">
+            <div style="width:28px;height:2px;background:#ffa657"></div>
+            Transición normal
+        </div>
+        <div class="legend-item">
+            <div style="width:28px;height:0;border-top:2px dashed #bc8cff"></div>
+            Transición ε (epsilon)
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,15 @@
+# Secrets y variables de entorno
+.env
+*.env
+
+# Node modules
+node_modules/
+
+# Bases de datos locales
+*.db
+*.sqlite
+
+# Archivos del sistema
+desktop.ini
+.DS_Store
+Thumbs.db
