@@ -4,22 +4,25 @@ import { analyzeText } from '../api/client'
 const useAnalysisStore = create((set) => ({
   text: '',
   provider: 'ollama',
-  model: 'llama3',
+  model: 'llama3.2',
   useExternal: true,
+  useCorrection: false,
   scSamples: 1,
 
   result: null,
   loading: false,
   error: null,
 
-  setText:       (text)        => set({ text }),
-  setProvider:   (provider)    => set({ provider }),
-  setModel:      (model)       => set({ model }),
-  setUseExternal:(useExternal) => set({ useExternal }),
-  setScSamples:  (scSamples)   => set({ scSamples }),
+  setText:         (text)          => set({ text }),
+  setProvider:     (provider)      => set({ provider }),
+  setModel:        (model)         => set({ model }),
+  setUseExternal:  (useExternal)   => set({ useExternal }),
+  setUseCorrection:(useCorrection) => set({ useCorrection }),
+  setScSamples:    (scSamples)     => set({ scSamples }),
 
   analyze: async () => {
-    const { text, provider, model, useExternal, scSamples } = useAnalysisStore.getState()
+    const { text, provider, model, useExternal, useCorrection, scSamples } =
+      useAnalysisStore.getState()
     set({ loading: true, error: null, result: null })
     try {
       const data = await analyzeText({
@@ -27,6 +30,7 @@ const useAnalysisStore = create((set) => ({
         llm_provider: provider,
         model,
         use_external_verification: useExternal,
+        use_ai_correction: useCorrection,
         self_consistency_samples: scSamples,
       })
       set({ result: data })

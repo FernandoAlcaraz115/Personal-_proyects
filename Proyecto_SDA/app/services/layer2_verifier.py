@@ -1,15 +1,23 @@
 """
 Layer 2 — External verification.
-Strategy:
-  1. Parse the claim to extract the subject entity and the claimed value.
-  2. Search Spanish Wikipedia first (handles Spanish text), then English.
-  3. If the claimed value is NOT present in the Wikipedia snippet about the
-     subject, mark it as contradicted with low confidence.
-  4. If the claimed value IS present, compute standard lexical overlap.
+Search order:
+  1. Spanish Wikipedia
+  2. English Wikipedia (fallback)
+  3. DuckDuckGo web search (additional source, free, no API key)
+
+Contradiction check: if the claimed value is NOT present in any
+retrieved snippet, the claim is marked as likely false.
 """
+import asyncio
 import httpx
 from typing import Optional, Tuple
 from app.models.analysis import Layer2Result
+
+_WIKIPEDIA_API = "https://{lang}.wikipedia.org/w/api.php"
+
+_HEADERS = {
+    "User-Agent": "HalluciDetect/1.0 (educational hallucination detector; contact: dev@example.com)"
+}
 
 _COMMON_STARTERS = {
     "la", "el", "los", "las", "un", "una", "uno",
@@ -24,85 +32,119 @@ _STOP_WORDS = {
     "not", "it", "its", "this", "that",
 }
 
+try:
+    from duckduckgo_search import DDGS
+    _DDG_AVAILABLE = True
+except ImportError:
+    _DDG_AVAILABLE = False
+
 
 class ExternalVerifier:
-    def __init__(self):
-        self._client = httpx.AsyncClient(timeout=10.0)
-
     async def verify(self, claim: str) -> Layer2Result:
         try:
             subject, claimed_value = self._parse_claim(claim)
 
-            # Try Spanish Wikipedia first, then English
-            snippet, found = await self._search_wikipedia(subject, lang="es")
-            if not found:
-                snippet, found = await self._search_wikipedia(subject, lang="en")
+            # Gather snippets from all available sources concurrently.
+            # DuckDuckGo uses the subject query (not the full claim) so the
+            # snippet is about the subject entity, not the claimed value itself.
+            wiki_es, wiki_en, ddg = await asyncio.gather(
+                self._search_wikipedia(subject, "es"),
+                self._search_wikipedia(subject, "en"),
+                self._search_duckduckgo(subject),
+            )
 
-            if not found:
+            snippets = [s for s, found in [wiki_es, wiki_en, ddg] if found and s]
+
+            if not snippets:
                 return Layer2Result(
                     verified=None,
                     confidence=0.5,
-                    source="wikipedia",
-                    snippet="No matching article found.",
+                    source="web",
+                    snippet="No matching sources found.",
                 )
 
-            snippet_lower = snippet.lower()
+            # Use all snippets combined for contradiction logic, but only
+            # the primary source for display (avoids mixed-language output).
+            combined = " ".join(snippets)
+            display_snippet = snippets[0][:350]
+            source_label = self._build_source_label(wiki_es[1], wiki_en[1], ddg[1])
 
-            # Core contradiction check:
-            # If the asserted value is not mentioned at all in Wikipedia's
-            # description of the subject, the claim is likely wrong.
-            if claimed_value and claimed_value.lower() not in snippet_lower:
+            # Contradiction check: claimed value must appear in sources about the subject.
+            if claimed_value and claimed_value.lower() not in combined.lower():
                 return Layer2Result(
                     verified=False,
                     confidence=0.15,
-                    source="wikipedia",
-                    snippet=snippet[:300],
+                    source=source_label,
+                    snippet=display_snippet,
                 )
 
-            # Standard overlap when the claimed value is found or unknown
-            overlap = self._lexical_overlap(claim.lower(), snippet_lower)
-            confidence = round(min(0.92, 0.50 + overlap * 0.85), 3)
+            overlap = self._lexical_overlap(claim.lower(), combined.lower())
+            confidence = round(min(0.93, 0.50 + overlap * 0.85), 3)
 
             return Layer2Result(
                 verified=confidence > 0.65,
                 confidence=confidence,
-                source="wikipedia",
-                snippet=snippet[:300],
+                source=source_label,
+                snippet=display_snippet,
             )
 
         except Exception:
             return Layer2Result(
                 verified=None,
                 confidence=0.5,
-                source="wikipedia",
+                source="web",
                 snippet="Verification unavailable.",
             )
 
-    async def _search_wikipedia(self, query: str, lang: str = "en") -> Tuple[str, bool]:
-        api = f"https://{lang}.wikipedia.org/w/api.php"
-        params = {
-            "action": "query",
-            "list": "search",
-            "srsearch": query,
-            "format": "json",
-            "srlimit": 1,
-        }
-        res = await self._client.get(api, params=params)
-        results = res.json().get("query", {}).get("search", [])
-        if not results:
+    async def _search_wikipedia(self, query: str, lang: str) -> Tuple[str, bool]:
+        try:
+            params = {
+                "action": "query",
+                "list": "search",
+                "srsearch": query,
+                "format": "json",
+                "srlimit": 1,
+            }
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                res = await client.get(
+                    _WIKIPEDIA_API.format(lang=lang),
+                    params=params,
+                    headers=_HEADERS,
+                )
+            results = res.json().get("query", {}).get("search", [])
+            if not results:
+                return "", False
+            raw = results[0].get("snippet", "")
+            clean = raw.replace('<span class="searchmatch">', "").replace("</span>", "")
+            return clean, True
+        except Exception:
             return "", False
-        raw = results[0].get("snippet", "")
-        clean = raw.replace('<span class="searchmatch">', "").replace("</span>", "")
-        return clean, True
+
+    async def _search_duckduckgo(self, query: str) -> Tuple[str, bool]:
+        if not _DDG_AVAILABLE:
+            return "", False
+        try:
+            results = await asyncio.to_thread(self._ddg_sync, query)
+            if not results:
+                return "", False
+            snippet = " | ".join(r.get("body", "")[:180] for r in results[:2])
+            return snippet, True
+        except Exception:
+            return "", False
+
+    def _ddg_sync(self, query: str) -> list:
+        with DDGS() as ddgs:
+            return list(ddgs.text(query, max_results=3))
+
+    def _build_source_label(self, wiki_es: bool, wiki_en: bool, ddg: bool) -> str:
+        sources = []
+        if wiki_es or wiki_en:
+            sources.append("Wikipedia")
+        if ddg:
+            sources.append("DuckDuckGo")
+        return " + ".join(sources) if sources else "web"
 
     def _parse_claim(self, text: str) -> Tuple[str, Optional[str]]:
-        """
-        Extract the subject entity (for the Wikipedia query) and the
-        claimed value (the asserted fact we want to verify).
-
-        Example: "La capital de Francia es Berlín."
-          → subject="Francia", claimed_value="Berlín"
-        """
         words = text.replace(".", "").replace(",", "").replace("¿", "").replace("¡", "").split()
         entities = []
         for w in words:
@@ -119,7 +161,6 @@ class ExternalVerifier:
         if not entities:
             return self._build_query(text), None
 
-        # Subject = first named entity; claimed value = last (what's being asserted)
         subject = entities[0]
         claimed_value = entities[-1] if len(entities) > 1 else None
         return subject, claimed_value

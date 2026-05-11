@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     serper_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
     default_llm_provider: str = "ollama"
-    default_model: str = "llama3"
+    default_model: str = "llama3.2"
 
     class Config:
         env_file = ".env"

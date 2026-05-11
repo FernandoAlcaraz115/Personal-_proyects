@@ -1,11 +1,10 @@
 """
-HallucinationDetector — orchestrates the three-layer pipeline.
+HallucinationDetector — orchestrates the four-layer pipeline.
 
-  Layer 1: Linguistic analysis  (always runs, no external calls)
-  Layer 2: External verification (Wikipedia, optional)
-  Layer 3: Adaptive confidence score
-
-Also performs self-consistency sampling when requested.
+  Layer 1: Linguistic analysis       (always runs)
+  Layer 2: External verification     (Wikipedia + DuckDuckGo, optional)
+  Layer 3: Adaptive confidence score (always runs)
+  Layer 4: AI correction             (only for medium/high risk, optional)
 """
 import time
 import uuid
@@ -14,16 +13,18 @@ from app.services.claim_extractor import ClaimExtractor
 from app.services.layer1_linguistic import LinguisticAnalyzer
 from app.services.layer2_verifier import ExternalVerifier
 from app.services.layer3_scorer import ConfidenceScorer
+from app.services.layer4_corrector import HallucinationCorrector
 from app.services.llm_client import LLMClient
 
 
 class HallucinationDetector:
     def __init__(self):
-        self.extractor = ClaimExtractor()
-        self.layer1    = LinguisticAnalyzer()
-        self.layer2    = ExternalVerifier()
-        self.layer3    = ConfidenceScorer()
-        self.llm       = LLMClient()
+        self.extractor  = ClaimExtractor()
+        self.layer1     = LinguisticAnalyzer()
+        self.layer2     = ExternalVerifier()
+        self.layer3     = ConfidenceScorer()
+        self.layer4     = HallucinationCorrector()
+        self.llm        = LLMClient()
 
     async def analyze(self, request: AnalysisRequest) -> AnalysisResponse:
         start = time.time()
@@ -52,6 +53,16 @@ class HallucinationDetector:
                 l2_result=l2,
                 sc_score=sc_scores.get("__global__"),
             )
+
+            # Layer 4: runs for all claims when enabled (let the AI decide)
+            if request.use_ai_correction:
+                wiki_snippet = l2.snippet if l2 else ""
+                result.l4 = await self.layer4.correct(
+                    claim=claim,
+                    wiki_snippet=wiki_snippet,
+                    provider=request.llm_provider,
+                )
+
             results.append(result)
 
         overall = (
@@ -59,11 +70,13 @@ class HallucinationDetector:
             if results else 1.0
         )
 
-        method = "hybrid-adaptive"
+        parts = ["hybrid-adaptive"]
         if request.self_consistency_samples > 1:
-            method += "+self-consistency"
+            parts.append("self-consistency")
         if not request.use_external_verification:
-            method = "linguistic-only"
+            parts = ["linguistic-only"]
+        if request.use_ai_correction:
+            parts.append("ai-correction")
 
         return AnalysisResponse(
             id=str(uuid.uuid4()),
@@ -71,5 +84,5 @@ class HallucinationDetector:
             claims=results,
             overall_score=overall,
             processing_time_ms=int((time.time() - start) * 1000),
-            method_used=method,
+            method_used="+".join(parts),
         )

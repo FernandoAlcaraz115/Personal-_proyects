@@ -1,19 +1,20 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --border: #334155;
-  --text: #f1f5f9;
-  --muted: #94a3b8;
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --purple: #7c3aed;
-  --green: #10b981;
-  --yellow: #f59e0b;
-  --red: #ef4444;
-  --radius: 10px;
-  --font: 'Segoe UI', system-ui, sans-serif;
+  --bg:           #0a0a0a;
+  --surface:      #111111;
+  --surface2:     #1a1a1a;
+  --border:       #242424;
+  --text:         #f0f0f0;
+  --muted:        #888888;
+  --primary:      #dc2626;
+  --primary-dark: #b91c1c;
+  --primary-glow: rgba(220, 38, 38, 0.25);
+  --green:        #22c55e;
+  --orange:       #f97316;
+  --red:          #ef4444;
+  --radius:       10px;
+  --font:         'Segoe UI', system-ui, sans-serif;
 }
 
 body {
@@ -24,11 +25,7 @@ body {
   line-height: 1.6;
 }
 
-button {
-  font-family: var(--font);
-  cursor: pointer;
-}
-
-textarea, select, input {
-  font-family: var(--font);
-}
+button    { font-family: var(--font); cursor: pointer; }
+textarea,
+select,
+input     { font-family: var(--font); }

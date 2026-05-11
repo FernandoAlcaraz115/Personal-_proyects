@@ -11,10 +11,11 @@ class LLMProvider(str, Enum):
 
 
 class AnalysisRequest(BaseModel):
-    text: str = Field(..., min_length=10, description="Text to analyze for hallucinations")
+    text: str = Field(..., min_length=10)
     llm_provider: LLMProvider = LLMProvider.ollama
     model: str = "llama3"
     use_external_verification: bool = True
+    use_ai_correction: bool = False
     self_consistency_samples: int = Field(1, ge=1, le=5)
 
 
@@ -32,12 +33,19 @@ class Layer2Result(BaseModel):
     snippet: str
 
 
+class CorrectionResult(BaseModel):
+    is_hallucination: bool
+    explanation: str
+    corrected_claim: str
+
+
 class ClaimResult(BaseModel):
     text: str
     confidence: float
     risk_level: str  # "low" | "medium" | "high"
     l1: Layer1Result
     l2: Optional[Layer2Result] = None
+    l4: Optional[CorrectionResult] = None
     explanation: str
 
 

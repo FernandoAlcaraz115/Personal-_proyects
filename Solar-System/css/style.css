@@ -1,0 +1,332 @@
+/* @import debe ir antes de cualquier regla */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap');
+
+/* ── Reset ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Variables ──────────────────────────────────── */
+:root {
+  --bg:             #000010;
+  --tooltip-bg:     rgba(5, 10, 30, 0.92);
+  --tooltip-border: rgba(100, 160, 255, 0.30);
+  --tooltip-accent: #6ab0ff;
+  --body-color:     #6ab0ff;
+  --font-display:   'Orbitron', sans-serif;
+  --font-body:      'Share Tech Mono', monospace;
+}
+
+/* ── Base ───────────────────────────────────────── */
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  overflow: hidden;
+  cursor: default;
+}
+
+canvas#canvas {
+  display: block;
+  width: 100%; height: 100%;
+}
+
+/* ════════════════════════════════════════════════
+   TOOLTIP
+   ════════════════════════════════════════════════ */
+.tooltip {
+  position: fixed;
+  pointer-events: none;        /* no bloquea el canvas cuando no está fijado */
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  border-top: 2px solid var(--body-color);
+  border-radius: 8px;
+  padding: 0 0 14px 0;        /* padding top = 0 porque la imagen ocupa ese espacio */
+  min-width: 250px;
+  max-width: 320px;
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 0 28px rgba(0,0,0,0.6),
+    0 0 14px color-mix(in srgb, var(--body-color) 18%, transparent);
+  transition: opacity 0.15s ease;
+  z-index: 100;
+  overflow: hidden;
+  /* Evita que el tooltip supere la altura visible; el contenido hace scroll */
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
+}
+
+/* Scrollbar temática dentro del tooltip */
+.tooltip::-webkit-scrollbar       { width: 4px; }
+.tooltip::-webkit-scrollbar-track { background: transparent; }
+.tooltip::-webkit-scrollbar-thumb { background: rgba(100,160,255,0.25); border-radius: 2px; }
+
+.tooltip.hidden { opacity: 0; }
+
+/* Fijado: habilita clics (para Wikipedia) y resalta borde lateral */
+.tooltip.pinned {
+  pointer-events: auto;
+  border-left: 2px solid var(--body-color);
+}
+
+/* ── Imagen hero ──────────────────────────────── */
+.tooltip-img {
+  display: block;
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  object-position: center;
+  margin-bottom: 12px;
+  /* Sin border-radius arriba porque el tooltip ya lo tiene */
+}
+
+/* ── Padding para el contenido bajo la imagen ─── */
+.tooltip-header,
+.tooltip p,
+.tooltip ul,
+.tooltip-wiki,
+.tooltip-hint {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* ── Cabecera ────────────────────────────────────── */
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tooltip h2 {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  letter-spacing: 0.12em;
+  color: var(--body-color);
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.tooltip-type-badge {
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--body-color);
+  border: 1px solid var(--body-color);
+  border-radius: 4px;
+  padding: 1px 6px;
+  opacity: 0.75;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Cuerpo ──────────────────────────────────────── */
+.tooltip p {
+  font-family: var(--font-body);
+  font-size: 0.73rem;
+  color: #aac4ee;
+  line-height: 1.55;
+  margin-bottom: 10px;
+}
+
+.tooltip ul {
+  list-style: none;
+  font-family: var(--font-body);
+  font-size: 0.71rem;
+  color: #7a9fc7;
+}
+
+.tooltip ul li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(100,160,255,0.08);
+}
+
+.tooltip ul li:last-child  { border-bottom: none; }
+.tooltip ul li span:last-child { color: #d0e8ff; }
+
+/* ── Wikipedia link ──────────────────────────────── */
+.tooltip-wiki {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font-body);
+  font-size: 0.70rem;
+  letter-spacing: 0.06em;
+  color: var(--body-color);
+  text-decoration: none;
+  border: 1px solid color-mix(in srgb, var(--body-color) 40%, transparent);
+  border-radius: 5px;
+  padding: 5px 10px;
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tooltip-wiki:hover {
+  background: color-mix(in srgb, var(--body-color) 15%, transparent);
+  color: #ffffff;
+}
+
+/* ── Hint ────────────────────────────────────────── */
+.tooltip-hint {
+  font-size: 0.60rem !important;
+  color: #3a5070 !important;
+  margin-bottom: 0 !important;
+  margin-top: 8px !important;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+/* ════════════════════════════════════════════════
+   PANEL DE CONTROLES
+   ════════════════════════════════════════════════ */
+#controls {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(4, 8, 24, 0.90);
+  border: 1px solid rgba(100, 160, 255, 0.22);
+  border-radius: 14px;
+  padding: 10px 20px;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.55);
+  z-index: 50;
+}
+
+/* ── Grupo genérico ──────────────────────────────── */
+.ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Separador vertical ──────────────────────────── */
+.ctrl-divider {
+  width: 1px;
+  height: 30px;
+  background: rgba(100, 160, 255, 0.18);
+  flex-shrink: 0;
+}
+
+/* ── Botón base ──────────────────────────────────── */
+.ctrl-btn {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: #6a8fb0;
+  background: rgba(100, 160, 255, 0.07);
+  border: 1px solid rgba(100, 160, 255, 0.18);
+  border-radius: 7px;
+  padding: 5px 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.ctrl-btn:hover {
+  color: #d0e8ff;
+  background: rgba(100, 160, 255, 0.14);
+  border-color: rgba(100, 160, 255, 0.38);
+}
+
+.ctrl-btn.active {
+  color: var(--tooltip-accent);
+  background: rgba(100, 160, 255, 0.13);
+  border-color: rgba(100, 160, 255, 0.42);
+}
+
+/* ── Grupo de velocidad ──────────────────────────── */
+.ctrl-speed-group {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-width: 210px;
+}
+
+.ctrl-speed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ctrl-label {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  letter-spacing: 0.10em;
+  color: #3a5878;
+  text-transform: uppercase;
+}
+
+.ctrl-speed-val {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: var(--tooltip-accent);
+}
+
+/* Slider */
+#slider-speed {
+  width: 100%;
+  height: 4px;
+  accent-color: var(--tooltip-accent);
+  cursor: pointer;
+}
+
+/* Presets de velocidad */
+.speed-presets {
+  display: flex;
+  gap: 4px;
+}
+
+.speed-preset {
+  flex: 1;
+  padding: 3px 4px;
+  font-size: 0.65rem;
+  text-align: center;
+}
+
+/* ════════════════════════════════════════════════
+   ETIQUETAS DE PLANETAS (CSS2DRenderer)
+   ════════════════════════════════════════════════ */
+.planet-label {
+  font-family: var(--font-body);
+  font-size: 0.60rem;
+  letter-spacing: 0.12em;
+  color: rgba(160, 200, 255, 0.65);
+  text-transform: uppercase;
+  pointer-events: none;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0,0,0,0.9);
+  white-space: nowrap;
+}
+
+/* ════════════════════════════════════════════════
+   LOADING
+   ════════════════════════════════════════════════ */
+#loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 200;
+  transition: opacity 0.6s ease;
+}
+
+#loading.hidden { opacity: 0; pointer-events: none; }
+
+.loader-text {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  color: var(--tooltip-accent);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 1;   }
+}

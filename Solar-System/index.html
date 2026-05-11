@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar System 3D</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <!-- Canvas donde Three.js renderiza -->
+  <canvas id="canvas"></canvas>
+
+  <!-- Tooltip flotante -->
+  <div id="tooltip" class="tooltip hidden">
+
+    <!-- Imagen del cuerpo celeste -->
+    <img id="tooltip-img" class="tooltip-img" src="" alt="" hidden />
+
+    <!-- Cabecera: nombre + badge de tipo -->
+    <div class="tooltip-header">
+      <h2 id="tooltip-name"></h2>
+      <span id="tooltip-type" class="tooltip-type-badge"></span>
+    </div>
+
+    <!-- Descripción -->
+    <p id="tooltip-description"></p>
+
+    <!-- Lista de datos -->
+    <ul id="tooltip-stats"></ul>
+
+    <!-- Link Wikipedia (solo cuando está fijado) -->
+    <a id="tooltip-wiki" class="tooltip-wiki" href="#" target="_blank" rel="noopener noreferrer" hidden>
+      Ver más en Wikipedia →
+    </a>
+
+    <!-- Hint interacción -->
+    <p id="tooltip-hint" class="tooltip-hint">Clic para fijar</p>
+
+  </div>
+
+  <!-- Panel de controles -->
+  <div id="controls">
+
+    <div class="ctrl-group">
+      <button id="btn-pause" class="ctrl-btn"><span>⏸ Pausar</span></button>
+      <button id="btn-reset" class="ctrl-btn" title="Restablecer vista de cámara">↺ Vista</button>
+    </div>
+
+    <div class="ctrl-divider"></div>
+
+    <div class="ctrl-group ctrl-speed-group">
+      <div class="ctrl-speed-header">
+        <span class="ctrl-label">Velocidad</span>
+        <span id="label-speed" class="ctrl-speed-val">1.0×</span>
+      </div>
+      <input type="range" id="slider-speed" min="0.05" max="20" step="0.05" value="1" />
+      <div class="speed-presets">
+        <button class="ctrl-btn speed-preset" data-speed="0.1">0.1×</button>
+        <button class="ctrl-btn speed-preset" data-speed="0.5">0.5×</button>
+        <button class="ctrl-btn speed-preset active" data-speed="1">1×</button>
+        <button class="ctrl-btn speed-preset" data-speed="5">5×</button>
+        <button class="ctrl-btn speed-preset" data-speed="20">20×</button>
+      </div>
+    </div>
+
+    <div class="ctrl-divider"></div>
+
+    <div class="ctrl-group">
+      <button id="btn-orbits" class="ctrl-btn active">Órbitas</button>
+      <button id="btn-labels" class="ctrl-btn active">Etiquetas</button>
+    </div>
+
+  </div>
+
+  <!-- Overlay de carga -->
+  <div id="loading">
+    <div class="loader-text">Cargando sistema solar…</div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module" src="js/main.js"></script>
+
+</body>
+
+</html>

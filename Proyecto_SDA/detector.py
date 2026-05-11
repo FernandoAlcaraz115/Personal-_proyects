@@ -21,7 +21,7 @@ class HallucinationDetector:
         self.layer2    = ExternalVerifier()
         self.layer3    = ConfidenceScorer()
         self.llm       = LLMClient()
-
+  
     async def analyze(self, request: AnalysisRequest) -> AnalysisResponse:
         # 1. Extraer claims atómicos del texto
         claims_raw = await self.extractor.extract(request.text)
