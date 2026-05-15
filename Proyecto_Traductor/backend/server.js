@@ -122,18 +122,26 @@ function processAIResponse(response) {
 
 app.post('/translate', authenticateOptional, async (req, res) => {
     try {
-        const { sourceCode, sourceLang, targetLang, includeComments = true, model = 'llama-3.1-8b-instant' } = req.body;
+        const { sourceCode, sourceLang, targetLang, includeComments = true, model = 'llama-3.1-8b-instant', uiLang = 'es' } = req.body;
         const userId = req.user ? req.user.id : null;
 
         if (!sourceCode) return res.status(400).json({ error: 'Falta código' });
-        console.log(`🔧 Traduciendo (${userId || 'Anónimo'}): ${sourceLang} -> ${targetLang}`);
+        console.log(`🔧 Traduciendo (${userId || 'Anónimo'}): ${sourceLang} -> ${targetLang} [${uiLang}]`);
 
-        const systemPrompt = `Actúa como un compilador experto. Traduce de ${sourceLang} a ${targetLang}.
-${includeComments ? "Incluye comentarios breves." : "Sin comentarios."}
-FORMATO DE SALIDA ESTRICTO:
-1. Bloque de código traducido.
-2. Separador EXACTO: |||||
-3. Breve resumen de cambios.`;
+        const commentsInstruction = uiLang === 'en'
+            ? (includeComments ? "Include brief explanatory comments in English." : "No comments.")
+            : (includeComments ? "Incluye comentarios breves en español." : "Sin comentarios.");
+
+        const summaryInstruction = uiLang === 'en'
+            ? "Brief summary of the changes made (in English)."
+            : "Breve resumen de los cambios realizados (en español).";
+
+        const systemPrompt = `Act as an expert compiler. Translate code from ${sourceLang} to ${targetLang}.
+${commentsInstruction}
+STRICT OUTPUT FORMAT:
+1. Translated code block.
+2. EXACT separator: |||||
+3. ${summaryInstruction}`;
 
         const response = await axios.post(GROQ_API_URL, {
             messages: [

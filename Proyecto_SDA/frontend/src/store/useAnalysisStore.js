@@ -5,6 +5,7 @@ const useAnalysisStore = create((set) => ({
   text: '',
   provider: 'ollama',
   model: 'llama3.2',
+  language: 'es',
   useExternal: true,
   useCorrection: false,
   scSamples: 1,
@@ -16,12 +17,13 @@ const useAnalysisStore = create((set) => ({
   setText:         (text)          => set({ text }),
   setProvider:     (provider)      => set({ provider }),
   setModel:        (model)         => set({ model }),
+  setLanguage:     (language)      => set({ language }),
   setUseExternal:  (useExternal)   => set({ useExternal }),
   setUseCorrection:(useCorrection) => set({ useCorrection }),
   setScSamples:    (scSamples)     => set({ scSamples }),
 
   analyze: async () => {
-    const { text, provider, model, useExternal, useCorrection, scSamples } =
+    const { text, provider, model, language, useExternal, useCorrection, scSamples } =
       useAnalysisStore.getState()
     set({ loading: true, error: null, result: null })
     try {
@@ -29,6 +31,7 @@ const useAnalysisStore = create((set) => ({
         text,
         llm_provider: provider,
         model,
+        language,
         use_external_verification: useExternal,
         use_ai_correction: useCorrection,
         self_consistency_samples: scSamples,

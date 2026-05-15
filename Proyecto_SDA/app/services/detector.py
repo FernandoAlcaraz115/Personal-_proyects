@@ -45,7 +45,7 @@ class HallucinationDetector:
 
             l2 = None
             if request.use_external_verification:
-                l2 = await self.layer2.verify(claim)
+                l2 = await self.layer2.verify(claim, language=request.language)
 
             result = await self.layer3.score(
                 claim=claim,
@@ -61,7 +61,13 @@ class HallucinationDetector:
                     claim=claim,
                     wiki_snippet=wiki_snippet,
                     provider=request.llm_provider,
+                    language=request.language,
                 )
+                # If L4 confirms hallucination, override the score so it's consistent
+                if result.l4 and result.l4.is_hallucination and result.l4.explanation != "AI correction unavailable.":
+                    result.confidence = round(min(result.confidence * 0.35, 0.40), 3)
+                    result.risk_level = "high"
+                    result.explanation += " AI confirmed hallucination."
 
             results.append(result)
 

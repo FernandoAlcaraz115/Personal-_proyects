@@ -1,3 +1,6 @@
+import useAnalysisStore from '../store/useAnalysisStore'
+import { translations } from '../i18n'
+
 const RISK = {
   low:    { color: '#22c55e', bg: 'rgba(34,197,94,.08)',  border: 'rgba(34,197,94,.2)'  },
   medium: { color: '#f97316', bg: 'rgba(249,115,22,.08)', border: 'rgba(249,115,22,.2)' },
@@ -5,18 +8,15 @@ const RISK = {
 }
 
 export default function ClaimCard({ claim, index }) {
+  const language = useAnalysisStore(s => s.language)
+  const t = translations[language] ?? translations.es
   const { color, border } = RISK[claim.risk_level] ?? RISK.medium
 
   return (
     <div style={{
-      background: '#111',
-      border: `1px solid ${border}`,
-      borderLeft: `3px solid ${color}`,
-      borderRadius: 8,
-      padding: '14px 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
+      background: '#111', border: `1px solid ${border}`,
+      borderLeft: `3px solid ${color}`, borderRadius: 8,
+      padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
     }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
@@ -52,54 +52,49 @@ export default function ClaimCard({ claim, index }) {
           fontSize: 12, color: '#444',
           borderTop: '1px solid #1e1e1e', paddingTop: 8, lineHeight: 1.5,
         }}>
-          <strong style={{ color: '#555' }}>{claim.l2.source}: </strong>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+            <strong style={{ color: '#555' }}>{claim.l2.source}</strong>
+            {claim.l2.source_url && (
+              <a
+                href={claim.l2.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 11, color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}
+                onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+                onMouseLeave={e => e.target.style.textDecoration = 'none'}
+              >
+                {t.wikiLink}
+              </a>
+            )}
+          </div>
           {claim.l2.snippet}
         </div>
       )}
 
       {/* Layer 4 — AI correction */}
       {claim.l4 && (
-        <div style={{
-          borderTop: '1px solid #1e1e1e',
-          paddingTop: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}>
-          {/* Status badge */}
+        <div style={{ borderTop: '1px solid #1e1e1e', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13 }}>
-              {claim.l4.is_hallucination ? '⚠️' : '✅'}
-            </span>
+            <span style={{ fontSize: 13 }}>{claim.l4.is_hallucination ? '⚠️' : '✅'}</span>
             <strong style={{
-              fontSize: 12,
+              fontSize: 12, textTransform: 'uppercase', letterSpacing: '.06em',
               color: claim.l4.is_hallucination ? '#ef4444' : '#22c55e',
-              textTransform: 'uppercase',
-              letterSpacing: '.06em',
             }}>
-              {claim.l4.is_hallucination ? 'Hallucination detected' : 'Claim appears accurate'}
+              {claim.l4.is_hallucination ? t.halluDetected : t.claimAccurate}
             </strong>
           </div>
 
-          {/* AI explanation */}
           <p style={{ fontSize: 12, color: '#666', lineHeight: 1.5 }}>
             {claim.l4.explanation}
           </p>
 
-          {/* Corrected claim (only if different from original) */}
-          {claim.l4.is_hallucination &&
-            claim.l4.corrected_claim.trim() !== claim.text.trim() && (
+          {claim.l4.is_hallucination && claim.l4.corrected_claim.trim() !== claim.text.trim() && (
             <div style={{
-              background: 'rgba(34,197,94,.06)',
-              border: '1px solid rgba(34,197,94,.2)',
-              borderRadius: 6,
-              padding: '10px 12px',
+              background: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.2)',
+              borderRadius: 6, padding: '10px 12px',
             }}>
-              <p style={{
-                fontSize: 10, fontWeight: 700, color: '#22c55e',
-                textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 5,
-              }}>
-                Corrected
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 5 }}>
+                {t.correctedLabel}
               </p>
               <p style={{ fontSize: 13, color: '#d4d4d4', lineHeight: 1.5 }}>
                 {claim.l4.corrected_claim}

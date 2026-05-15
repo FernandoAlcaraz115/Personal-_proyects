@@ -1,11 +1,124 @@
 // Configuración
 const API_URL = 'http://localhost:3000';
 
+// ===== SISTEMA DE IDIOMAS (i18n) =====
+const TRANSLATIONS = {
+    es: {
+        history: 'Historial',
+        historyTitle: 'Historial de Traducciones',
+        heroTitle: 'Traductor de Código con IA',
+        heroSubtitle: 'Convierte código entre 7 lenguajes de programación al instante',
+        sourcePanel: 'Código Fuente',
+        targetPanel: 'Código Traducido',
+        sourcePlaceholder: 'Pega tu código aquí...',
+        targetPlaceholder: 'El código traducido aparecerá aquí...',
+        clear: 'Limpiar',
+        paste: 'Pegar',
+        copy: 'Copiar',
+        download: 'Descargar',
+        modelLabel: 'Modelo de Inteligencia Artificial:',
+        commentsToggle: 'Incluir comentarios explicativos',
+        translateBtn: 'Traducir Código',
+        changesTitle: 'Cambios Realizados',
+        hello: 'Hola',
+        logout: 'Salir',
+        login: '🔐 Iniciar Sesión',
+        noHistory: 'No tienes traducciones guardadas aún.',
+        loadHistory: 'Cargando historial...',
+        loadInEditor: '⬇️ Clic para cargar en editor',
+        translating: '⏳ Traduciendo...',
+        successTranslation: '✅ Traducción exitosa',
+        successCopy: 'Copiado al portapapeles',
+        successClean: 'Limpio',
+        successPaste: 'Pegado',
+        successLoad: '✅ Traducción cargada correctamente',
+        errEmpty: '❌ Por favor, ingresa código para traducir',
+        errSameLang: '❌ Los lenguajes deben ser diferentes',
+        errSession: 'Sesión expirada. Inicia sesión de nuevo.',
+        errCopy: 'Error al copiar',
+        errPaste: 'No se pudo pegar',
+        errNothingCopy: 'Nada que copiar',
+        errNothingDownload: 'Nada que descargar',
+        confirmLogout: '¿Cerrar sesión?',
+        downloadedAs: '✅ Descargado como',
+    },
+    en: {
+        history: 'History',
+        historyTitle: 'Translation History',
+        heroTitle: 'AI Code Translator',
+        heroSubtitle: 'Convert code between 7 programming languages instantly',
+        sourcePanel: 'Source Code',
+        targetPanel: 'Translated Code',
+        sourcePlaceholder: 'Paste your code here...',
+        targetPlaceholder: 'Translated code will appear here...',
+        clear: 'Clear',
+        paste: 'Paste',
+        copy: 'Copy',
+        download: 'Download',
+        modelLabel: 'Artificial Intelligence Model:',
+        commentsToggle: 'Include explanatory comments',
+        translateBtn: 'Translate Code',
+        changesTitle: 'Changes Made',
+        hello: 'Hello',
+        logout: 'Log out',
+        login: '🔐 Sign In',
+        noHistory: 'No translations saved yet.',
+        loadHistory: 'Loading history...',
+        loadInEditor: '⬇️ Click to load in editor',
+        translating: '⏳ Translating...',
+        successTranslation: '✅ Translation successful',
+        successCopy: 'Copied to clipboard',
+        successClean: 'Cleared',
+        successPaste: 'Pasted',
+        successLoad: '✅ Translation loaded successfully',
+        errEmpty: '❌ Please enter code to translate',
+        errSameLang: '❌ Languages must be different',
+        errSession: 'Session expired. Please sign in again.',
+        errCopy: 'Copy failed',
+        errPaste: 'Could not paste',
+        errNothingCopy: 'Nothing to copy',
+        errNothingDownload: 'Nothing to download',
+        confirmLogout: 'Sign out?',
+        downloadedAs: '✅ Downloaded as',
+    }
+};
+
+let currentLang = localStorage.getItem('uiLang') || 'es';
+
+function t(key) {
+    return TRANSLATIONS[currentLang][key] || TRANSLATIONS['es'][key] || key;
+}
+
+function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('uiLang', lang);
+
+    // Actualizar botones activos
+    document.getElementById('lang-es')?.classList.toggle('active', lang === 'es');
+    document.getElementById('lang-en')?.classList.toggle('active', lang === 'en');
+
+    // Actualizar todos los elementos con data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (TRANSLATIONS[lang][key]) el.textContent = TRANSLATIONS[lang][key];
+    });
+
+    // Actualizar placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (TRANSLATIONS[lang][key]) el.placeholder = TRANSLATIONS[lang][key];
+    });
+
+    // Re-renderizar el user-display con el nuevo idioma
+    checkLoginStatus();
+}
+
 // ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', function () {
     console.log('🚀 CodeTranslate AI - Inicializando...');
 
-    // 1. Verificar sesión y rol (Admin/User)
+    // 1. Aplicar idioma guardado y verificar sesión
+    setLanguage(currentLang);
     checkLoginStatus();
 
     // 2. Configurar funcionalidades base
@@ -41,11 +154,11 @@ function checkLoginStatus() {
 
         // Crear enlace de Admin (Solo si es admin)
         const adminLink = role === 'admin'
-            ? ` | <a href="admin.html" style="color: #f59e0b; font-weight:bold; text-decoration:none;">🛡️ Admin</a>`
+            ? `<span class="nav-user-sep">·</span><a href="admin.html" style="color: #f59e0b; font-weight:bold; text-decoration:none;">🛡️ Admin</a>`
             : '';
 
         if (userDisplay) {
-            userDisplay.innerHTML = `Hola, <b>${username}</b>${adminLink} | <a href="#" id="logout-link" style="color: var(--secondary)">Salir</a>`;
+            userDisplay.innerHTML = `<span>${t('hello')}, <b>${username}</b></span>${adminLink}<span class="nav-user-sep">·</span><a href="#" id="logout-link">${t('logout')}</a>`;
 
             // Asignar evento al nuevo link de salir
             const logoutLink = document.getElementById('logout-link');
@@ -59,7 +172,7 @@ function checkLoginStatus() {
         // Usuario Anónimo
         console.log('👤 Usuario anónimo');
         if (userDisplay) {
-            userDisplay.innerHTML = `<a href="login.html" style="color: var(--primary)">Iniciar Sesión</a>`;
+            userDisplay.innerHTML = `<a href="login.html" class="action-btn" style="font-size:0.85rem; padding:7px 14px; text-decoration:none;">${t('login')}</a>`;
         }
         // Ocultar botón de historial
         if (historyBtn) historyBtn.style.display = 'none';
@@ -68,7 +181,7 @@ function checkLoginStatus() {
 
 function handleLogout(e) {
     if (e) e.preventDefault();
-    if (confirm('¿Cerrar sesión?')) {
+    if (confirm(t('confirmLogout'))) {
         // Borrar todo del navegador
         localStorage.removeItem('token');
         localStorage.removeItem('username');
@@ -112,7 +225,7 @@ async function loadHistoryData() {
     const listContainer = document.getElementById('history-list');
     if (!listContainer) return;
 
-    listContainer.innerHTML = '<p style="text-align:center; color:#94a3b8">Cargando historial...</p>';
+    listContainer.innerHTML = `<p style="text-align:center; color:#94a3b8">${t('loadHistory')}</p>`;
 
     try {
         const token = localStorage.getItem('token');
@@ -147,7 +260,7 @@ async function loadHistoryData() {
                     </div>
                     <div class="history-preview">${preview}</div>
                     <div style="margin-top:5px; font-size:0.8rem; color:#64748b; text-align:right;">
-                        ⬇️ Clic para cargar en editor
+                        ${t('loadInEditor')}
                     </div>
                 `;
 
@@ -159,7 +272,7 @@ async function loadHistoryData() {
                 listContainer.appendChild(div);
             });
         } else {
-            listContainer.innerHTML = '<p style="text-align:center; color:#94a3b8">No tienes traducciones guardadas aún.</p>';
+            listContainer.innerHTML = `<p style="text-align:center; color:#94a3b8">${t('noHistory')}</p>`;
         }
 
     } catch (error) {
@@ -181,7 +294,7 @@ function loadTranslationIntoEditor(item) {
     // Actualizar iconos de banderas
     initializeLanguageIcons();
 
-    showNotification('✅ Traducción cargada correctamente');
+    showNotification(t('successLoad'));
 }
 
 // ===== MANEJADOR DE TRADUCCIÓN =====
@@ -198,18 +311,18 @@ async function handleTranslation() {
 
     // Validaciones
     if (!sourceCode.trim()) {
-        showNotification('❌ Por favor, ingresa código para traducir', 'error');
+        showNotification(t('errEmpty'), 'error');
         return;
     }
     if (sourceLang === targetLang) {
-        showNotification('❌ Los lenguajes deben ser diferentes', 'error');
+        showNotification(t('errSameLang'), 'error');
         return;
     }
 
     // UI Loading
     const translateBtn = document.getElementById('translate-btn');
     const originalText = translateBtn.innerHTML;
-    translateBtn.innerHTML = '⏳ Traduciendo...';
+    translateBtn.innerHTML = `⏳ ${t('translating').replace('⏳ ', '')}`;
     translateBtn.disabled = true;
 
     try {
@@ -233,7 +346,8 @@ async function handleTranslation() {
                 sourceLang,
                 targetLang,
                 includeComments,
-                model: selectedModel
+                model: selectedModel,
+                uiLang: currentLang
             })
         });
 
@@ -243,7 +357,7 @@ async function handleTranslation() {
             if (response.status === 401 || response.status === 403) {
                 // Token expirado o inválido
                 handleLogout();
-                throw new Error('Sesión expirada. Inicia sesión de nuevo.');
+                throw new Error(t('errSession'));
             }
             throw new Error(data.error || `HTTP ${response.status}`);
         }
@@ -259,7 +373,7 @@ async function handleTranslation() {
                 document.getElementById('changes-panel').classList.remove('show');
             }
 
-            showNotification('✅ Traducción exitosa', 'success');
+            showNotification(t('successTranslation'), 'success');
         }
 
     } catch (error) {
@@ -304,14 +418,29 @@ function initializeLanguageIcons() {
     const sourceIcon = document.getElementById('source-icon');
     const targetIcon = document.getElementById('target-icon');
 
-    const languageIcons = {
-        'python': '🐍', 'java': '☕', 'javascript': '📜',
-        'cpp': '⚡', 'csharp': '🔷', 'php': '🐘', 'ruby': '💎'
+    const languageLogos = {
+        'python':     'img/python_logo.png',
+        'java':       'img/java_logo.png',
+        'javascript': 'img/javascrip_logo.png',
+        'cpp':        'img/c++_logo.png',
+        'csharp':     'img/c%23_logo.png',
+        'php':        'img/php_logo.png',
+        'ruby':       'img/ruby_logo.png'
     };
 
     function updateIcons() {
-        if (sourceLanguage && sourceIcon) sourceIcon.textContent = languageIcons[sourceLanguage.value] || '❓';
-        if (targetLanguage && targetIcon) targetIcon.textContent = languageIcons[targetLanguage.value] || '❓';
+        if (sourceLanguage && sourceIcon) {
+            const src = languageLogos[sourceLanguage.value];
+            sourceIcon.innerHTML = src
+                ? `<img src="${src}" alt="${sourceLanguage.value}" style="width:20px;height:20px;object-fit:contain;">`
+                : '❓';
+        }
+        if (targetLanguage && targetIcon) {
+            const src = languageLogos[targetLanguage.value];
+            targetIcon.innerHTML = src
+                ? `<img src="${src}" alt="${targetLanguage.value}" style="width:20px;height:20px;object-fit:contain;">`
+                : '❓';
+        }
     }
 
     if (sourceLanguage) sourceLanguage.addEventListener('change', updateIcons);
@@ -327,8 +456,8 @@ function setupOtherButtons() {
             const code = document.getElementById('target-code');
             if (!code.value.trim()) return showNotification('Nada que copiar', 'error');
             navigator.clipboard.writeText(code.value)
-                .then(() => showNotification('Copiado al portapapeles'))
-                .catch(() => showNotification('Error al copiar', 'error'));
+                .then(() => showNotification(t('successCopy')))
+                .catch(() => showNotification(t('errCopy'), 'error'));
         });
     }
 
@@ -336,15 +465,42 @@ function setupOtherButtons() {
     const clearSrc = document.getElementById('clear-source');
     if (clearSrc) clearSrc.addEventListener('click', () => {
         document.getElementById('source-code').value = '';
-        showNotification('Limpio', 'success');
+        showNotification(t('successClean'), 'success');
     });
 
     // Limpiar Destino
     const clearTg = document.getElementById('clear-target');
     if (clearTg) clearTg.addEventListener('click', () => {
         document.getElementById('target-code').value = '';
-        showNotification('Limpio', 'success');
+        showNotification(t('successClean'), 'success');
     });
+
+    // Descargar código traducido
+    const downloadBtn = document.getElementById('download-target');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            const code = document.getElementById('target-code').value;
+            if (!code.trim()) return showNotification(t('errNothingDownload'), 'error');
+
+            const extensions = {
+                python: 'py', java: 'java', javascript: 'js',
+                cpp: 'cpp', csharp: 'cs', php: 'php', ruby: 'rb'
+            };
+            const lang = document.getElementById('target-language').value;
+            const ext = extensions[lang] || 'txt';
+            const filename = `traduccion.${ext}`;
+
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showNotification(`${t('downloadedAs')} ${filename}`);
+        });
+    }
 
     // Pegar
     const pasteBtn = document.getElementById('paste-source');
@@ -353,9 +509,9 @@ function setupOtherButtons() {
             try {
                 const text = await navigator.clipboard.readText();
                 document.getElementById('source-code').value = text;
-                showNotification('Pegado', 'success');
+                showNotification(t('successPaste'), 'success');
             } catch (e) {
-                showNotification('No se pudo pegar', 'error');
+                showNotification(t('errPaste'), 'error');
             }
         });
     }

@@ -10,11 +10,11 @@ public class P6U3_prodcons extends JFrame {
     // COMPONENTES DE LA GUI
     // =========================
 
-    private JTextField txtProd1;
-    private JTextField txtProd2;
-    private JTextField txtConsumidor;
+    private JProgressBar barProd1;
+    private JProgressBar barProd2;
+    private JProgressBar barConsumidor;
 
-    private JTextField txtBuffer;
+    private JProgressBar barBuffer;
 
     private JSpinner spCapacidad;
 
@@ -92,13 +92,15 @@ public class P6U3_prodcons extends JFrame {
 
         add(panelP1);
 
-        txtProd1 = new JTextField();
+        barProd1 = new JProgressBar(0, 99);
 
-        txtProd1.setBounds(30, 40, 150, 30);
+        barProd1.setBounds(15, 40, 180, 30);
 
-        txtProd1.setEditable(false);
+        barProd1.setStringPainted(true);
 
-        panelP1.add(txtProd1);
+        barProd1.setString("En espera...");
+
+        panelP1.add(barProd1);
 
         btnStartP1 = new JButton("Start");
 
@@ -126,13 +128,15 @@ public class P6U3_prodcons extends JFrame {
 
         add(panelP2);
 
-        txtProd2 = new JTextField();
+        barProd2 = new JProgressBar(0, 99);
 
-        txtProd2.setBounds(30, 40, 150, 30);
+        barProd2.setBounds(15, 40, 180, 30);
 
-        txtProd2.setEditable(false);
+        barProd2.setStringPainted(true);
 
-        panelP2.add(txtProd2);
+        barProd2.setString("En espera...");
+
+        panelP2.add(barProd2);
 
         btnStartP2 = new JButton("Start");
 
@@ -160,13 +164,15 @@ public class P6U3_prodcons extends JFrame {
 
         add(panelC);
 
-        txtConsumidor = new JTextField();
+        barConsumidor = new JProgressBar(0, 99);
 
-        txtConsumidor.setBounds(30, 40, 150, 30);
+        barConsumidor.setBounds(15, 40, 180, 30);
 
-        txtConsumidor.setEditable(false);
+        barConsumidor.setStringPainted(true);
 
-        panelC.add(txtConsumidor);
+        barConsumidor.setString("En espera...");
+
+        panelC.add(barConsumidor);
 
         btnStartC = new JButton("Start");
 
@@ -192,13 +198,17 @@ public class P6U3_prodcons extends JFrame {
 
         add(lblBuffer);
 
-        txtBuffer = new JTextField("0");
+        barBuffer = new JProgressBar(0, 5);
 
-        txtBuffer.setBounds(250, 290, 150, 30);
+        barBuffer.setBounds(250, 290, 350, 30);
 
-        txtBuffer.setEditable(false);
+        barBuffer.setStringPainted(true);
 
-        add(txtBuffer);
+        barBuffer.setString("0 / 5");
+
+        barBuffer.setForeground(new Color(0, 180, 0));
+
+        add(barBuffer);
 
         // =====================================================
         // CAPACIDAD
@@ -252,6 +262,23 @@ public class P6U3_prodcons extends JFrame {
 
         // Crear buffer
         buffer = new Buffer((int) spCapacidad.getValue());
+
+        spCapacidad.addChangeListener(e -> {
+            boolean algunHiloActivo = (productor1 != null && productor1.isAlive())
+                    || (productor2 != null && productor2.isAlive())
+                    || (consumidor != null && consumidor.isAlive());
+            if (algunHiloActivo) {
+                agregarLog("Detén todos los hilos antes de cambiar la capacidad del buffer.");
+                spCapacidad.setValue(buffer.getCapacidad());
+            } else {
+                int nuevaCap = (int) spCapacidad.getValue();
+                buffer = new Buffer(nuevaCap);
+                barBuffer.setMaximum(nuevaCap);
+                barBuffer.setValue(0);
+                barBuffer.setString("0 / " + nuevaCap);
+                agregarLog("Buffer recreado con capacidad: " + nuevaCap);
+            }
+        });
     }
 
     // =====================================================
@@ -327,6 +354,11 @@ public class P6U3_prodcons extends JFrame {
 
             return cola.size();
         }
+
+        public synchronized int getCapacidad() {
+
+            return capacidad;
+        }
     }
 
     // =====================================================
@@ -339,13 +371,13 @@ public class P6U3_prodcons extends JFrame {
 
         private String nombre;
 
-        private JTextField campo;
+        private JProgressBar barra;
 
-        public Productor(String nombre, JTextField campo) {
+        public Productor(String nombre, JProgressBar barra) {
 
             this.nombre = nombre;
 
-            this.campo = campo;
+            this.barra = barra;
         }
 
         @Override
@@ -357,7 +389,10 @@ public class P6U3_prodcons extends JFrame {
 
                 buffer.producir(numero, nombre);
 
-                SwingUtilities.invokeLater(() -> campo.setText("Produciendo: " + numero));
+                SwingUtilities.invokeLater(() -> {
+                    barra.setValue(numero);
+                    barra.setString("Produciendo: " + numero);
+                });
 
                 try {
 
@@ -365,11 +400,14 @@ public class P6U3_prodcons extends JFrame {
 
                 } catch (InterruptedException e) {
 
-                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
                 }
             }
 
-            SwingUtilities.invokeLater(() -> campo.setText("DETENIDO"));
+            SwingUtilities.invokeLater(() -> {
+                barra.setValue(0);
+                barra.setString("DETENIDO");
+            });
         }
 
         public void detener() {
@@ -398,7 +436,12 @@ public class P6U3_prodcons extends JFrame {
 
                 int valor = buffer.consumir("Consumidor");
 
-                SwingUtilities.invokeLater(() -> txtConsumidor.setText("Consumido: " + valor));
+                if (!ejecutar) break;
+
+                SwingUtilities.invokeLater(() -> {
+                    barConsumidor.setValue(valor);
+                    barConsumidor.setString("Consumido: " + valor);
+                });
 
                 try {
 
@@ -406,11 +449,14 @@ public class P6U3_prodcons extends JFrame {
 
                 } catch (InterruptedException e) {
 
-                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
                 }
             }
 
-            SwingUtilities.invokeLater(() -> txtConsumidor.setText("DETENIDO"));
+            SwingUtilities.invokeLater(() -> {
+                barConsumidor.setValue(0);
+                barConsumidor.setString("DETENIDO");
+            });
         }
 
         public void detener() {
@@ -428,7 +474,7 @@ public class P6U3_prodcons extends JFrame {
 
         if (productor1 == null || !productor1.isAlive()) {
 
-            productor1 = new Productor("Productor 1", txtProd1);
+            productor1 = new Productor("Productor 1", barProd1);
 
             productor1.start();
 
@@ -440,7 +486,7 @@ public class P6U3_prodcons extends JFrame {
 
         if (productor2 == null || !productor2.isAlive()) {
 
-            productor2 = new Productor("Productor 2", txtProd2);
+            productor2 = new Productor("Productor 2", barProd2);
 
             productor2.start();
 
@@ -502,7 +548,11 @@ public class P6U3_prodcons extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
 
-            txtBuffer.setText(String.valueOf(buffer.tamano()));
+            int tam = buffer.tamano();
+            int cap = buffer.getCapacidad();
+            barBuffer.setMaximum(cap);
+            barBuffer.setValue(tam);
+            barBuffer.setString(tam + " / " + cap);
         });
     }
 

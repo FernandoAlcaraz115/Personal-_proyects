@@ -1,10 +1,8 @@
 """
 Layer 4 — AI Correction.
-Only activates for medium/high risk claims.
-Asks the LLM to:
-  1. Confirm whether the claim is a hallucination.
-  2. Explain why it's wrong (or correct).
-  3. Provide the corrected version.
+Asks the LLM to confirm whether the claim is a hallucination,
+explain why it's wrong (or correct), and provide the corrected version.
+All text output is in the language requested by the user.
 """
 import json
 import re
@@ -12,7 +10,10 @@ import httpx
 from app.models.analysis import CorrectionResult
 from app.core.config import settings
 
+_LANG_NAME = {"es": "Spanish", "en": "English"}
+
 _PROMPT = """You are a fact-checking assistant. Your ONLY job is to output a JSON object.
+IMPORTANT: ALL text values inside the JSON MUST be written in {lang_name}. Do NOT use any other language.
 
 Claim to verify: "{claim}"
 {context}
@@ -20,13 +21,18 @@ Claim to verify: "{claim}"
 Rules:
 - Output ONLY raw JSON. No markdown. No code blocks. No explanation outside the JSON.
 - "is_hallucination": true if the claim contains a factual error, false if it is correct.
-- "explanation": one sentence explaining why.
-- "corrected_claim": the fixed sentence if wrong, or the original if correct.
+- "explanation": one sentence in {lang_name} explaining why it is wrong or correct.
+- "corrected_claim": the fixed sentence in {lang_name} if wrong, or the original if correct.
 
-Output example:
-{{"is_hallucination": true, "explanation": "Berlin is the capital of Germany, not France.", "corrected_claim": "La capital de Francia es París."}}
+Output example (in {lang_name}):
+{example}
 
 Now output the JSON for the claim above:"""
+
+_EXAMPLES = {
+    "Spanish": '{{"is_hallucination": true, "explanation": "Berlín es la capital de Alemania, no de Francia.", "corrected_claim": "La capital de Francia es París."}}',
+    "English": '{{"is_hallucination": true, "explanation": "Berlin is the capital of Germany, not France.", "corrected_claim": "The capital of France is Paris."}}',
+}
 
 
 class HallucinationCorrector:
@@ -38,12 +44,19 @@ class HallucinationCorrector:
         claim: str,
         wiki_snippet: str = "",
         provider: str = "ollama",
+        language: str = "es",
     ) -> CorrectionResult:
-        context = f'Context from Wikipedia: "{wiki_snippet[:300]}"' if wiki_snippet else ""
-        prompt = _PROMPT.format(claim=claim, context=context)
+        lang_name = _LANG_NAME.get(language, "Spanish")
+        context   = f'Context from Wikipedia: "{wiki_snippet[:300]}"' if wiki_snippet else ""
+        prompt    = _PROMPT.format(
+            lang_name=lang_name,
+            claim=claim,
+            context=context,
+            example=_EXAMPLES[lang_name],
+        )
 
         try:
-            raw = await self._query(prompt, provider)
+            raw  = await self._query(prompt, provider)
             data = self._parse_json(raw)
             if data:
                 return CorrectionResult(

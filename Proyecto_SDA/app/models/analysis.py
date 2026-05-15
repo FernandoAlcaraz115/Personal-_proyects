@@ -13,7 +13,8 @@ class LLMProvider(str, Enum):
 class AnalysisRequest(BaseModel):
     text: str = Field(..., min_length=10)
     llm_provider: LLMProvider = LLMProvider.ollama
-    model: str = "llama3"
+    model: str = "llama3.2"
+    language: str = "es"
     use_external_verification: bool = True
     use_ai_correction: bool = False
     self_consistency_samples: int = Field(1, ge=1, le=5)
@@ -31,6 +32,7 @@ class Layer2Result(BaseModel):
     confidence: float
     source: str
     snippet: str
+    source_url: Optional[str] = None
 
 
 class CorrectionResult(BaseModel):
