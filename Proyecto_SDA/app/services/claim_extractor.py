@@ -7,7 +7,13 @@ from typing import List
 
 try:
     import spacy
-    _nlp = spacy.load("en_core_web_sm")
+    try:
+        _nlp = spacy.load("es_core_news_sm")
+    except Exception:
+        try:
+            _nlp = spacy.load("en_core_web_sm")
+        except Exception:
+            _nlp = None
 except Exception:
     _nlp = None
 

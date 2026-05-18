@@ -164,6 +164,10 @@ class ExternalVerifier:
         return " + ".join(sources) if sources else "web"
 
     def _parse_claim(self, text: str) -> Tuple[str, Optional[str]]:
+        # For very short texts use directly as the search query
+        if len(text.split()) < 4:
+            return text, None
+
         words = text.replace(".", "").replace(",", "").replace("¿", "").replace("¡", "").split()
 
         # First pass: prefer capitalized proper nouns as entities

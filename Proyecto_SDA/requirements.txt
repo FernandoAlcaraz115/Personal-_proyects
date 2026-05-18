@@ -7,3 +7,4 @@ bcrypt>=4.1.0
 python-dotenv>=1.0.0
 duckduckgo-search>=6.2.0
 # spaCy no soporta Python 3.14 aún. El extractor de claims usa regex como fallback automáticamente.
+# Para instalar el modelo español: python -m spacy download es_core_news_sm
