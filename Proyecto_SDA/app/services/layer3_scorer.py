@@ -19,9 +19,12 @@ class ConfidenceScorer:
         linguistic_penalty = l1_result.hedging_score * 0.4 + l1_result.vagueness_score * 0.2
         confidence = 1.0 - linguistic_penalty
 
-        # Blend with external verification (equal weight when available)
+        # Blend with external verification; contradiction dominates
         if l2_result is not None:
-            confidence = confidence * 0.5 + l2_result.confidence * 0.5
+            if l2_result.verified is False:
+                confidence = confidence * 0.2 + l2_result.confidence * 0.8
+            else:
+                confidence = confidence * 0.5 + l2_result.confidence * 0.5
 
         # Blend with self-consistency score
         if sc_score is not None:

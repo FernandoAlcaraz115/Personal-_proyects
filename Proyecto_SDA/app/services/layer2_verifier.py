@@ -170,18 +170,33 @@ class ExternalVerifier:
 
         words = text.replace(".", "").replace(",", "").replace("¿", "").replace("¡", "").split()
 
-        # First pass: prefer capitalized proper nouns as entities
+        # Build multi-word named entity spans (e.g. "Steve Jobs", "Torre Eiffel")
         entities = []
-        for w in words:
-            clean = w.strip(".,;:!?")
+        i = 0
+        while i < len(words):
+            w = words[i].strip(".,;:!?")
             if (
-                clean
-                and clean[0].isupper()
-                and len(clean) > 2
-                and clean.lower() not in _COMMON_STARTERS
-                and clean.lower() not in _STOP_WORDS
+                w and w[0].isupper() and len(w) > 1
+                and w.lower() not in _COMMON_STARTERS
+                and w.lower() not in _STOP_WORDS
             ):
-                entities.append(clean)
+                span = [w]
+                j = i + 1
+                while j < len(words):
+                    nw = words[j].strip(".,;:!?")
+                    if (
+                        nw and nw[0].isupper() and len(nw) > 1
+                        and nw.lower() not in _COMMON_STARTERS
+                        and nw.lower() not in _STOP_WORDS
+                    ):
+                        span.append(nw)
+                        j += 1
+                    else:
+                        break
+                entities.append(" ".join(span))
+                i = j
+            else:
+                i += 1
 
         if entities:
             subject = entities[0]
@@ -189,7 +204,6 @@ class ExternalVerifier:
             return subject, claimed_value
 
         # Fallback: extract meaningful words regardless of case.
-        # Subject = first meaningful word, claimed_value = last meaningful word.
         meaningful = [
             w.strip(".,;:!?") for w in words
             if len(w.strip(".,;:!?")) > 2
