@@ -10,6 +10,7 @@ simuladas completas con soporte para inyección de fallas.
 from abc import ABC, abstractmethod
 import random
 import time
+import math
 from typing import Optional, Dict, Any
 
 
@@ -158,9 +159,10 @@ class VentiladorSimulado(IVentilador):
             # Afectado por la degradación mecánica
             rpm_deseada = rpm_teorica * (1.0 - self.degradacion_mecanica)
 
-        # Inercia física: el ventilador tarda unos instantes en acelerar o frenar
+        # Inercia física: integración exponencial incondicionalmente estable
         tau = 2.0  # constante de tiempo en segundos
-        self.rpm_actual += (rpm_deseada - self.rpm_actual) * (dt / max(dt, tau))
+        factor_inercia = 1.0 - math.exp(-dt / tau) if dt > 0 else 0.0
+        self.rpm_actual += (rpm_deseada - self.rpm_actual) * factor_inercia
         self.rpm_actual = max(0.0, round(self.rpm_actual, 1))
 
     def get_rpm_actual(self) -> float:

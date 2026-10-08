@@ -95,6 +95,15 @@ class ControladorAireAcondicionado:
         if codigo in self.alertas_activas:
             del self.alertas_activas[codigo]
 
+    def rearmar_sistema(self) -> None:
+        """Restablece los temporizadores de diagnóstico y despeja todas las alertas activas."""
+        self.alertas_activas.clear()
+        self.tiempo_compresor_alta_potencia_seg = 0.0
+        self.tiempo_sin_bajar_temperatura_seg = 0.0
+        self.tiempo_ventilador_activo_seg = 0.0
+        self.tiempo_puerta_abierta_seg = 0.0
+        self.lecturas_sensor_consecutivas_iguales = 0
+
     def evaluar_sensor_temperatura(self, temp_leida: Optional[float]) -> bool:
         """
         Verifica la integridad de las lecturas del sensor.
@@ -235,9 +244,9 @@ class ControladorAireAcondicionado:
                 self.tiempo_puerta_abierta_seg = 0.0
                 self.despejar_alerta("WARN_PUERTA_ABIERTA_PROLONGADA")
 
-        # Detección de sobrecarga térmica extrema
-        if self.compresor.get_capacidad() >= 80.0 and self.tiempo_compresor_alta_potencia_seg > 20.0:
-            if temp_actual > self.setpoint + 1.2:
+        # Detección de sobrecarga térmica extrema (el compresor trabaja a alta potencia pero la temperatura no baja)
+        if self.compresor.get_capacidad() >= 80.0 and self.tiempo_compresor_alta_potencia_seg > 15.0:
+            if temp_actual > self.setpoint + 1.2 and self.tiempo_sin_bajar_temperatura_seg >= 10.0:
                 self.registrar_alerta(
                     TipoAlerta.ADVERTENCIA,
                     "WARN_SOBRECARGA_TERMICA",

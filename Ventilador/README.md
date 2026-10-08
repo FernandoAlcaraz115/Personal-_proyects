@@ -125,13 +125,15 @@ python main.py --gui
 ```
 
 #### Características de la GUI:
-- **Turbina del Evaporador Animada:** Aspas que giran en tiempo real proporcionalmente a las RPM leídas por el tacómetro.
+- **Acelerador de Tiempo de Simulación (1x, 5x, 10x, 25x):** Permite acelerar la respuesta térmica para observar el enfriamiento, la modulación Inverter y el corte por histéresis en cuestión de 15 a 30 segundos en lugar de minutos de espera.
+- **Turbina del Evaporador Animada:** Aspas que giran en tiempo real proporcionalmente a las RPM leídas por el tacómetro, con renderizado visual desacoplado a 30 FPS para máxima suavidad.
 - **Efecto de Partículas de Aire:** Partículas cian/azules de aire frío expulsadas cuando el compresor opera y el ventilador gira; partículas tenues de recirculación si el compresor está en reposo; o ausencia total de flujo si el ventilador se traba.
+- **Carga de Escenarios Rápidos:** Botones preconfigurados para cargar instantáneamente cualquiera de los casos de estudio (Normal, Ventilador lento, Fuga de gas, Puerta abierta con 10 personas o Datacenter con servidores Blade).
 - **Termostato Digital:** Ajuste del setpoint en vivo con botones `➕` / `➖`, visualización de la banda de histéresis y del estado del inversor (`REPOSO POR HISTÉRESIS`, `MODULACIÓN INVERTER`, `MÁXIMA POTENCIA`).
 - **Medidores en Tiempo Real:** Barras de modulación Inverter (0% a 100%) y de presión de gas refrigerante (PSI).
 - **Controles en Vivo:** Sliders de cantidad de personas (0 a 15) y temperatura exterior; botones para abrir/cerrar puerta y ventana; y switch para activar modo Datacenter con servidores Blade (+7,500 W).
-- **Inyección Interactiva de Fallas:** Botones para simular desgaste del ventilador (bajas RPM), fuga de gas refrigerante, desconexión del sensor o bloqueo total, acompañados de un botón para **Restablecer / Reparar Todo**.
-- **Panel de Alertas y Diagnóstico:** Semáforo de estado y bitácora con registro en tiempo real de advertencias de mantenimiento.
+- **Inyección Interactiva de Fallas:** Botones para simular desgaste del ventilador (bajas RPM), fuga de gas refrigerante, desconexión del sensor o bloqueo total, acompañados de un botón para **Restablecer / Reparar Todo** con rearme de diagnósticos.
+- **Panel de Alertas y Diagnóstico:** Semáforo de estado y bitácora con registro inteligente en tiempo real libre de duplicados.
 
 ---
 

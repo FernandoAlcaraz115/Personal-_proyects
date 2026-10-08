@@ -43,9 +43,17 @@ class AmbienteTermico:
     CALOR_POR_BLADE_WATTS = 2500.0   # W por chasis blade (alta densidad de cómputo)
     COEF_TRANSMISION_PAREDES = 2.2   # W / (m^2 * K) coeficiente global U promedio
 
-    def __init__(self, config: Optional[ConfiguracionRecinto] = None, temp_inicial: float = 30.0):
+    def __init__(
+        self,
+        config: Optional[ConfiguracionRecinto] = None,
+        temp_inicial: float = 30.0,
+        factor_aceleracion_termica: float = 1.0,
+        inercia_estructural: float = 2.0
+    ):
         self.config = config if config is not None else ConfiguracionRecinto()
         self.temperatura_interior = temp_inicial
+        self.factor_aceleracion_termica = max(0.1, factor_aceleracion_termica)
+        self.inercia_estructural = max(0.5, inercia_estructural)
 
         # Duración acumulada de eventos
         self.segundos_puerta_abierta = 0.0
@@ -61,11 +69,11 @@ class AmbienteTermico:
     @property
     def capacidad_termica_total_j_k(self) -> float:
         """
-        Capacidad calorífica efectiva del aire más inercia térmica de
-        muros, piso y mobiliario (aproximada como 4x la masa del aire).
+        Capacidad calorífica efectiva del aire más inercia de mobiliario.
+        Ajustada por el factor de aceleración térmica para respuesta ágil.
         """
-        inercia_estructural = 4.0
-        return self.masa_aire_kg * self.CALOR_ESPECIFICO_AIRE * inercia_estructural
+        cap_base = self.masa_aire_kg * self.CALOR_ESPECIFICO_AIRE * self.inercia_estructural
+        return cap_base / self.factor_aceleracion_termica
 
     def set_personas(self, cantidad: int) -> None:
         """Modifica la ocupación de personas en el cuarto."""
@@ -84,13 +92,14 @@ class AmbienteTermico:
     def calcular_cargas_termicas(self) -> dict:
         """
         Calcula las distintas fuentes de calor entrantes al recinto en Watts (J/s).
+        Transferencia bidireccional según diferencias de temperatura.
         """
         delta_t_ext = self.config.temperatura_exterior - self.temperatura_interior
 
-        # 1. Ganancia por paredes y techo (proporcional al área perimetral estimada)
+        # 1. Ganancia o pérdida por paredes y techo
         lado = self.config.area_m2 ** 0.5
         area_envolvente = (4 * lado * self.config.altura_m) + self.config.area_m2
-        q_paredes = max(0.0, self.COEF_TRANSMISION_PAREDES * area_envolvente * delta_t_ext)
+        q_paredes = self.COEF_TRANSMISION_PAREDES * area_envolvente * delta_t_ext
 
         # 2. Ganancia metabólica humana
         q_personas = self.config.personas * self.CALOR_POR_PERSONA_WATTS
@@ -98,12 +107,10 @@ class AmbienteTermico:
         # 3. Ganancia por equipos informáticos (Datacenter / Blades)
         q_datacenter = 0.0
         if self.config.es_datacenter:
-            # Si no se especificó blade pero está marcado datacenter, asumimos al menos 3 blades
             n_blades = max(self.config.servidores_blade_activos, 3)
             q_datacenter = n_blades * self.CALOR_POR_BLADE_WATTS
 
         # 4. Infiltración de aire por puertas y ventanas abiertas
-        # Caudal de aire renovado por convección natural (m^3/s)
         caudal_infiltracion_m3_s = 0.0
         if self.config.puerta_abierta:
             caudal_infiltracion_m3_s += 0.35  # Aproximadamente 1200 m^3/h por puerta estándar abierta
@@ -112,7 +119,7 @@ class AmbienteTermico:
 
         # Flujo de masa infiltrado (kg/s)
         m_punto_infil = caudal_infiltracion_m3_s * self.DENSIDAD_AIRE
-        q_infiltracion = max(0.0, m_punto_infil * self.CALOR_ESPECIFICO_AIRE * delta_t_ext)
+        q_infiltracion = m_punto_infil * self.CALOR_ESPECIFICO_AIRE * delta_t_ext
 
         q_ganancia_total = q_paredes + q_personas + q_datacenter + q_infiltracion
 
