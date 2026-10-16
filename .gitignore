@@ -27,3 +27,13 @@ dist/
 desktop.ini
 .DS_Store
 Thumbs.db
+
+# Independent Projects
+NetTutorIA/
+
+# Compressed Archives
+*.rar
+*.zip
+*.7z
+
+

@@ -79,17 +79,21 @@ class ExternalVerifier:
             # Pick the first available Wikipedia URL (primary language preferred)
             source_url = wiki_primary[2] or wiki_secondary[2] or None
 
-            # Contradiction check: claimed value must appear in sources about the subject.
-            if claimed_value and claimed_value.lower() not in combined.lower():
-                return Layer2Result(
-                    verified=False,
-                    confidence=0.15,
-                    source=source_label,
-                    snippet=display_snippet,
-                    source_url=source_url,
-                )
+            # If claimed value is present, check support vs discrepancy
+            overlap = self._lexical_overlap(claim, combined)
+            if claimed_value:
+                clean_claimed = claimed_value.strip().lower()
+                if clean_claimed not in combined.lower():
+                    # If the source talks about the subject but lacks the claimed value, penalize proportionally
+                    conf = round(max(0.20, 0.45 - overlap * 0.2), 3)
+                    return Layer2Result(
+                        verified=False if overlap > 0.3 else None,
+                        confidence=conf,
+                        source=source_label,
+                        snippet=display_snippet,
+                        source_url=source_url,
+                    )
 
-            overlap    = self._lexical_overlap(claim.lower(), combined.lower())
             confidence = round(min(0.93, 0.50 + overlap * 0.85), 3)
 
             return Layer2Result(
@@ -220,9 +224,15 @@ class ExternalVerifier:
         words = [w for w in text.split() if w.lower() not in _STOP_WORDS]
         return " ".join(words[:8])
 
+    def _clean_tokens(self, text: str) -> set:
+        import re
+        tokens = re.findall(r"\b[\wáéíóúüñÁÉÍÓÚÜÑ0-9]+\b", text.lower())
+        return {t for t in tokens if t not in _STOP_WORDS}
+
     def _lexical_overlap(self, claim: str, snippet: str) -> float:
-        claim_words   = set(claim.split()) - _STOP_WORDS
-        snippet_words = set(snippet.split())
+        claim_words   = self._clean_tokens(claim)
+        snippet_words = self._clean_tokens(snippet)
         if not claim_words:
             return 0.0
         return len(claim_words & snippet_words) / len(claim_words)
+

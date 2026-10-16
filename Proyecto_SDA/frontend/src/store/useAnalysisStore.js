@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { analyzeText } from '../api/client'
 
-const useAnalysisStore = create((set) => ({
+const useAnalysisStore = create((set, get) => ({
+  mode: 'text', // 'text' | 'code' | 'math'
   text: '',
   provider: 'ollama',
   model: 'llama3.2',
@@ -14,21 +15,22 @@ const useAnalysisStore = create((set) => ({
   loading: false,
   error: null,
 
-  setText:         (text)          => set({ text }),
-  setProvider:     (provider)      => set({ provider }),
-  setModel:        (model)         => set({ model }),
-  setLanguage:     (language)      => set({ language }),
-  setUseExternal:  (useExternal)   => set({ useExternal }),
-  setUseCorrection:(useCorrection) => set({ useCorrection }),
-  setScSamples:    (scSamples)     => set({ scSamples }),
+  setMode: (mode) => set({ mode, result: null, error: null }),
+  setText: (text) => set({ text }),
+  setProvider: (provider) => set({ provider }),
+  setModel: (model) => set({ model }),
+  setLanguage: (language) => set({ language }),
+  setUseExternal: (useExternal) => set({ useExternal }),
+  setUseCorrection: (useCorrection) => set({ useCorrection }),
+  setScSamples: (scSamples) => set({ scSamples }),
 
   analyze: async () => {
-    const { text, provider, model, language, useExternal, useCorrection, scSamples } =
-      useAnalysisStore.getState()
+    const { text, mode, provider, model, language, useExternal, useCorrection, scSamples } = get()
     set({ loading: true, error: null, result: null })
     try {
       const data = await analyzeText({
         text,
+        mode,
         llm_provider: provider,
         model,
         language,
@@ -38,7 +40,7 @@ const useAnalysisStore = create((set) => ({
       })
       set({ result: data })
     } catch (err) {
-      set({ error: err.response?.data?.detail ?? 'Connection error.' })
+      set({ error: err.response?.data?.detail ?? 'Error de conexión con el servidor.' })
     } finally {
       set({ loading: false })
     }
