@@ -20,6 +20,10 @@ export default function CodeResultView({ codeResult }) {
 
   if (!codeResult) return null
 
+  const isJS = codeResult.language === 'javascript'
+  const langLabel = isJS ? 'JavaScript / TypeScript' : 'Python'
+  const registryLabel = isJS ? 'npm' : 'PyPI'
+
   function handleCopy() {
     if (codeResult.corrected_code) {
       navigator.clipboard.writeText(codeResult.corrected_code)
@@ -31,7 +35,7 @@ export default function CodeResultView({ codeResult }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* AST Syntax Validation Status */}
+      {/* AST / Syntax Validation Status */}
       <div style={{
         background: codeResult.is_valid_syntax ? 'var(--status-success-bg)' : 'var(--status-error-bg)',
         border: `1px solid ${codeResult.is_valid_syntax ? 'var(--status-success-border)' : 'var(--status-error-border)'}`,
@@ -50,16 +54,29 @@ export default function CodeResultView({ codeResult }) {
             <XCircle size={18} color="var(--status-error-text)" />
           )}
           <div>
-            <p style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: codeResult.is_valid_syntax ? 'var(--status-success-text)' : 'var(--status-error-text)',
-            }}>
-              {codeResult.is_valid_syntax ? t.codeSyntaxValid : t.codeSyntaxError}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <p style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: codeResult.is_valid_syntax ? 'var(--status-success-text)' : 'var(--status-error-text)',
+              }}>
+                {codeResult.is_valid_syntax ? t.codeSyntaxValid : t.codeSyntaxError}
+              </p>
+              <span style={{
+                fontSize: '10px',
+                fontFamily: 'var(--font-mono)',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+              }}>
+                {langLabel}
+              </span>
+            </div>
             <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: 2 }}>
               {codeResult.is_valid_syntax 
-                ? 'El árbol sintáctico abstracto (AST) de Python se construyó sin errores gramaticales.' 
+                ? `Estructura sintáctica de ${langLabel} verificada sin errores gramaticales.` 
                 : 'Se encontraron fallas gramaticales que impiden la compilación o ejecución del bloque.'}
             </p>
           </div>
@@ -111,7 +128,7 @@ export default function CodeResultView({ codeResult }) {
           </div>
 
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            El modelo importó módulos inexistentes que no forman parte de la biblioteca estándar de Python ni del registro oficial de PyPI:
+            El modelo importó módulos inexistentes que no forman parte de la biblioteca estándar ni del registro oficial de {registryLabel}:
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

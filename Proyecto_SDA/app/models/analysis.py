@@ -75,6 +75,7 @@ class CodeIssue(BaseModel):
 
 
 class CodeAnalysisResult(BaseModel):
+    language: str = "python"
     is_valid_syntax: bool
     confidence_score: float
     risk_level: str

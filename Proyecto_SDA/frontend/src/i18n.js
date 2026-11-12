@@ -42,7 +42,8 @@ export const translations = {
       { label: '✅ Texto correcto', text: 'El agua es una molécula compuesta por dos átomos de hidrógeno y uno de oxígeno. Es esencial para la vida en la Tierra.' },
     ],
     demosCode: [
-      { label: '📦 Librería fantasma', text: "import package_totalmente_fantasma_xyz123\n\n# El modelo inventó una librería que no existe en PyPI\ndata = package_totalmente_fantasma_xyz123.load_data('test.csv')\nprint(data.summary())" },
+      { label: '🐍 Librería PyPI fantasma', text: "import package_totalmente_fantasma_xyz123\n\n# El modelo inventó una librería que no existe en PyPI\ndata = package_totalmente_fantasma_xyz123.load_data('test.csv')\nprint(data.summary())" },
+      { label: '🟡 JavaScript / npm fantasma', text: "import { cryptoUtil } from 'nonexistent-slopsquat-lib-998877'\n\n// Módulo npm inexistente y método inventado\nconst matrix = [[1, 2], [3, [4]]];\nconst flat = matrix.flatDeep();\nconsole.log(flat);" },
       { label: '❌ Método inventado',  text: "import math\n\ndef verificar_primo(numero):\n    # math.is_prime NO existe en la librería estándar de Python\n    return math.is_prime(numero)\n\nprint(verificar_primo(29))" },
       { label: '⚡ Error sintáctico',  text: "def calcular_promedio(valores):\n    total = 0\n    for v in valores\n        total += v\n    return total / len(valores)" },
       { label: '✅ Código correcto',   text: "import math\n\ndef calcular_hipotenusa(a, b):\n    return math.sqrt(a**2 + b**2)\n\nprint('Hipotenusa:', calcular_hipotenusa(3, 4))" },
@@ -168,7 +169,8 @@ export const translations = {
       { label: '✅ Accurate text', text: 'Water is a molecule composed of two hydrogen atoms and one oxygen atom. It is essential for life on Earth.' },
     ],
     demosCode: [
-      { label: '📦 Ghost package', text: "import package_totalmente_fantasma_xyz123\n\n# The LLM invented a package that does not exist on PyPI\ndata = package_totalmente_fantasma_xyz123.load_data('test.csv')\nprint(data.summary())" },
+      { label: '🐍 Ghost PyPI package', text: "import package_totalmente_fantasma_xyz123\n\n# The LLM invented a package that does not exist on PyPI\ndata = package_totalmente_fantasma_xyz123.load_data('test.csv')\nprint(data.summary())" },
+      { label: '🟡 Ghost npm package', text: "import { cryptoUtil } from 'nonexistent-slopsquat-lib-998877'\n\n// Non-existent npm module and fabricated method\nconst matrix = [[1, 2], [3, [4]]];\nconst flat = matrix.flatDeep();\nconsole.log(flat);" },
       { label: '❌ Fabricated API', text: "import math\n\ndef is_prime_number(num):\n    # math.is_prime does NOT exist in Python standard library\n    return math.is_prime(num)\n\nprint(is_prime_number(29))" },
       { label: '⚡ Syntax error',   text: "def compute_average(values):\n    total = 0\n    for v in values\n        total += v\n    return total / len(values)" },
       { label: '✅ Clean code',    text: "import math\n\ndef hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)\n\nprint('Hypotenuse:', hypotenuse(3, 4))" },

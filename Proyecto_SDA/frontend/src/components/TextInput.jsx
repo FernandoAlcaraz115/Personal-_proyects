@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import useAnalysisStore from '../store/useAnalysisStore'
 import { translations } from '../i18n'
 import { 
@@ -7,12 +7,16 @@ import {
   Play, 
   RotateCcw,
   Sliders,
-  ChevronDown
+  ChevronDown,
+  UploadCloud,
+  FileUp,
+  FileText,
+  X
 } from 'lucide-react'
 
 export default function TextInput() {
   const {
-    mode, text, setText, provider, setProvider,
+    mode, setMode, text, setText, provider, setProvider,
     model, setModel, language, setLanguage,
     useExternal, setUseExternal,
     useCorrection, setUseCorrection,
@@ -22,6 +26,9 @@ export default function TextInput() {
 
   const t = translations[language] ?? translations.es
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [loadedFileName, setLoadedFileName] = useState(null)
+  const fileInputRef = useRef(null)
 
   let currentDemos = t.demosText
   let currentPlaceholder = t.placeholderText
@@ -40,8 +47,37 @@ export default function TextInput() {
     analyze()
   }
 
+  function handleFiles(files) {
+    if (!files || files.length === 0) return
+    const file = files[0]
+    const reader = new FileReader()
+
+    reader.onload = (e) => {
+      const content = e.target.result
+      if (typeof content === 'string') {
+        reset()
+        setText(content)
+        setLoadedFileName(file.name)
+
+        // Auto-detect mode by file extension
+        const ext = file.name.split('.').pop()?.toLowerCase()
+        if (['py', 'pyw', 'ipynb'].includes(ext)) {
+          setMode('code')
+        } else if (['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs'].includes(ext)) {
+          setMode('code')
+        } else if (['tex', 'latex', 'math'].includes(ext)) {
+          setMode('math')
+        } else if (['txt', 'md', 'json', 'csv'].includes(ext)) {
+          setMode('text')
+        }
+      }
+    }
+    reader.readAsText(file)
+  }
+
   function loadDemo(demoText) {
     reset()
+    setLoadedFileName(null)
     setText(demoText)
   }
 
@@ -68,25 +104,63 @@ export default function TextInput() {
             Casos de Prueba
           </span>
 
-          {mode === 'math' && (
-            <div style={{ display: 'flex', gap: 3 }}>
-              {['√', '^', '×', '÷', 'sin(x)', 'cos(x)', '='].map(sym => (
-                <button
-                  key={sym}
-                  type="button"
-                  onClick={() => insertSymbol(sym)}
-                  className="key-cap"
-                  style={{
-                    color: 'var(--text-main)',
-                    cursor: 'pointer',
-                  }}
-                  title={`Insertar ${sym}`}
-                >
-                  {sym}
-                </button>
-              ))}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={e => handleFiles(e.target.files)}
+              style={{ display: 'none' }}
+              accept=".py,.pyw,.js,.ts,.tsx,.jsx,.txt,.md,.json,.csv,.tex"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-hairline)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                padding: '3px 8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                cursor: 'pointer',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = '#fff'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'var(--text-secondary)'
+                e.currentTarget.style.borderColor = 'var(--border-hairline)'
+              }}
+              title="Cargar archivo .py, .js, .txt, .json o .tex"
+            >
+              <UploadCloud size={12} />
+              <span>Cargar Archivo</span>
+            </button>
+
+            {mode === 'math' && (
+              <div style={{ display: 'flex', gap: 3 }}>
+                {['√', '^', '×', '÷', 'sin(x)', 'cos(x)', '='].map(sym => (
+                  <button
+                    key={sym}
+                    type="button"
+                    onClick={() => insertSymbol(sym)}
+                    className="key-cap"
+                    style={{
+                      color: 'var(--text-main)',
+                      cursor: 'pointer',
+                    }}
+                    title={`Insertar ${sym}`}
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -125,10 +199,85 @@ export default function TextInput() {
       </div>
 
       {/* Editor Surface */}
-      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      <div 
+        onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={e => {
+          e.preventDefault()
+          setIsDragging(false)
+          handleFiles(e.dataTransfer.files)
+        }}
+        style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}
+      >
+        {isDragging && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(12, 12, 14, 0.92)',
+            border: '2px dashed #ffffff',
+            borderRadius: '10px',
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            backdropFilter: 'blur(4px)',
+          }}>
+            <FileUp size={28} color="#ffffff" />
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
+              Suelta el archivo aquí para auditarlo
+            </p>
+            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+              Detecta automáticamente Python, JavaScript, Matemáticas y Texto
+            </p>
+          </div>
+        )}
+
+        {/* Loaded File Pill */}
+        {loadedFileName && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid var(--border-hairline)',
+            borderRadius: '6px',
+            padding: '3px 8px',
+            marginBottom: 8,
+            alignSelf: 'flex-start',
+            fontSize: '11px',
+            color: 'var(--text-main)',
+            fontFamily: 'var(--font-mono)',
+          }}>
+            <FileText size={12} color="var(--text-secondary)" />
+            <span>{loadedFileName}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setLoadedFileName(null)
+                setText('')
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'inline-flex',
+              }}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
         <textarea
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => {
+            setText(e.target.value)
+            if (loadedFileName) setLoadedFileName(null)
+          }}
           placeholder={currentPlaceholder}
           rows={mode === 'code' ? 10 : 8}
           style={{

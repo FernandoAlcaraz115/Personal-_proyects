@@ -14,8 +14,12 @@ import {
   RotateCcw,
   Sliders,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Printer,
+  FileCode,
+  FileDown
 } from 'lucide-react'
+import { downloadMarkdown, downloadJSON, printAuditReport } from '../utils/exporter'
 
 export default function CommandPalette({ isOpen, onClose }) {
   const { 
@@ -26,11 +30,13 @@ export default function CommandPalette({ isOpen, onClose }) {
     reset, 
     setIsHistoryOpen, 
     setIsCompareOpen,
+    setIsBenchmarkOpen,
     useExternal,
     setUseExternal,
     useCorrection,
     setUseCorrection,
-    loading
+    loading,
+    result
   } = useAnalysisStore()
 
   const t = translations[language] ?? translations.es
@@ -143,6 +149,56 @@ export default function CommandPalette({ isOpen, onClose }) {
         onClose()
       },
     },
+    {
+      id: 'benchmark',
+      category: 'Vistas',
+      title: 'Abrir Suite de Benchmarks y Métricas',
+      subtitle: 'Evaluar precisión, recall, F1 y matriz de confusión',
+      shortcut: 'B',
+      icon: Scale,
+      action: () => {
+        setIsBenchmarkOpen(true)
+        onClose()
+      },
+    },
+    ...(result ? [
+      {
+        id: 'export-md',
+        category: 'Exportar Informe',
+        title: 'Exportar Informe en Markdown (.md)',
+        subtitle: 'Descarga un informe técnico formal con veredictos',
+        shortcut: 'E',
+        icon: FileText,
+        action: () => {
+          downloadMarkdown(result)
+          onClose()
+        },
+      },
+      {
+        id: 'export-json',
+        category: 'Exportar Informe',
+        title: 'Exportar Payload JSON (.json)',
+        subtitle: 'Estructura de datos completa para pipelines automatizados',
+        shortcut: 'J',
+        icon: FileCode,
+        action: () => {
+          downloadJSON(result)
+          onClose()
+        },
+      },
+      {
+        id: 'export-pdf',
+        category: 'Exportar Informe',
+        title: 'Imprimir Certificado Oficial / Guardar PDF',
+        subtitle: 'Abre el certificado formal con diseño tipográfico',
+        shortcut: 'P',
+        icon: Printer,
+        action: () => {
+          printAuditReport(result)
+          onClose()
+        },
+      },
+    ] : []),
     {
       id: 'lang',
       category: 'Sistema',

@@ -89,3 +89,25 @@ async def test_math_valid_equation(detector):
     assert res.math_result.has_hallucinations is False
     assert res.math_result.valid_equations == 2
     assert res.risk_level == "low"
+
+
+@pytest.mark.asyncio
+async def test_javascript_ghost_package_and_api(detector):
+    js_code = """
+    import { something } from 'nonexistent-slopsquat-lib-998877';
+    const arr = [1, [2, [3]]];
+    const flat = arr.flatDeep();
+    """
+    req = AnalysisRequest(
+        text=js_code,
+        mode=AnalysisMode.code,
+        use_external_verification=True,
+    )
+    res = await detector.analyze(req)
+    assert res.mode == "code"
+    assert res.code_result is not None
+    assert res.code_result.language == "javascript"
+    assert "nonexistent-slopsquat-lib-998877" in res.code_result.hallucinated_packages
+    assert any("flatDeep" in i.symbol for i in res.code_result.issues)
+    assert res.risk_level == "high"
+

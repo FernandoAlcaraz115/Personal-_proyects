@@ -6,6 +6,7 @@ import ResultPanel from './components/ResultPanel'
 import HistoryDrawer from './components/HistoryDrawer'
 import CompareModal from './components/CompareModal'
 import CommandPalette from './components/CommandPalette'
+import BenchmarkModal from './components/BenchmarkModal'
 import { 
   ShieldCheck, 
   FileText, 
@@ -19,11 +20,22 @@ import {
   Search,
   CheckCircle2,
   Terminal,
-  X
+  X,
+  Activity
 } from 'lucide-react'
 
 export default function App() {
-  const { language, setLanguage, mode, setMode, history, setIsHistoryOpen, setIsCompareOpen } = useAnalysisStore()
+  const { 
+    language, 
+    setLanguage, 
+    mode, 
+    setMode, 
+    history, 
+    setIsHistoryOpen, 
+    setIsCompareOpen,
+    isBenchmarkOpen,
+    setIsBenchmarkOpen 
+  } = useAnalysisStore()
   const t = translations[language] ?? translations.es
   const [showHow, setShowHow] = useState(false)
   const [isCommandOpen, setIsCommandOpen] = useState(false)
@@ -263,6 +275,34 @@ export default function App() {
           >
             <Scale size={13} />
             <span>{t.navCompare}</span>
+          </button>
+
+          {/* Benchmark Suite */}
+          <button
+            onClick={() => setIsBenchmarkOpen(true)}
+            title="Abrir panel de benchmarks y evaluación de métricas"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 9px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              background: 'transparent',
+              border: '1px solid transparent',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#ffffff'
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            <Activity size={13} />
+            <span>Benchmark</span>
           </button>
 
           {/* Language */}
@@ -546,6 +586,7 @@ export default function App() {
       <CommandPalette isOpen={isCommandOpen} onClose={() => setIsCommandOpen(false)} />
       <HistoryDrawer />
       <CompareModal />
+      <BenchmarkModal isOpen={isBenchmarkOpen} onClose={() => setIsBenchmarkOpen(false)} />
 
     </div>
   )

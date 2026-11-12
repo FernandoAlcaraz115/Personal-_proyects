@@ -11,14 +11,19 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Terminal,
-  Activity
+  Activity,
+  FileText,
+  FileCode,
+  Printer,
+  Download
 } from 'lucide-react'
+import { downloadMarkdown, downloadJSON, printAuditReport } from '../utils/exporter'
 
 export default function ResultPanel() {
-  const { result, error, loading, language, mode } = useAnalysisStore()
+  const { result, error, loading, language, mode, currentStreamStep } = useAnalysisStore()
   const t = translations[language] ?? translations.es
 
-  if (loading) return <LayerProgress mode={mode} />
+  if (loading) return <LayerProgress mode={mode} streamStep={currentStreamStep} />
 
   if (error) {
     return (
@@ -146,6 +151,114 @@ export default function ResultPanel() {
         </div>
       </div>
 
+      {/* Export & Actions Toolbar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '8px 12px',
+        background: 'rgba(255, 255, 255, 0.015)',
+        border: '1px solid var(--border-hairline)',
+        borderRadius: '8px',
+        fontSize: '11.5px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-tertiary)' }}>
+          <Download size={13} />
+          <span>Exportar Informe Oficial:</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => downloadMarkdown(result)}
+            title="Descargar informe completo en Markdown"
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-hairline)',
+              color: 'var(--text-secondary)',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              fontSize: '11px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#fff'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.borderColor = 'var(--border-hairline)'
+            }}
+          >
+            <FileText size={12} />
+            Markdown (.md)
+          </button>
+
+          <button
+            onClick={() => downloadJSON(result)}
+            title="Descargar payload en formato JSON"
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-hairline)',
+              color: 'var(--text-secondary)',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              fontSize: '11px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#fff'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.borderColor = 'var(--border-hairline)'
+            }}
+          >
+            <FileCode size={12} />
+            JSON (.json)
+          </button>
+
+          <button
+            onClick={() => printAuditReport(result)}
+            title="Imprimir o guardar como PDF"
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-hairline)',
+              color: 'var(--text-secondary)',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              fontSize: '11px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#fff'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.borderColor = 'var(--border-hairline)'
+            }}
+          >
+            <Printer size={12} />
+            Imprimir / PDF
+          </button>
+        </div>
+      </div>
+
       {/* Mode-Specific Views */}
       {result.mode === 'code' && (
         <CodeResultView codeResult={result.code_result} />
@@ -207,12 +320,12 @@ export default function ResultPanel() {
   )
 }
 
-function LayerProgress({ mode }) {
+function LayerProgress({ mode, streamStep }) {
   const [activeStep, setActiveStep] = useState(0)
 
   const stepsMap = {
     code: [
-      { name: 'Análisis Sintáctico AST', detail: 'Parseando árbol de código Python…' },
+      { name: 'Análisis Sintáctico AST', detail: 'Parseando estructura de código…' },
       { name: 'Registro de Paquetes PyPI', detail: 'Auditando existencia de dependencias…' },
       { name: 'Firmas de APIs', detail: 'Comprobando métodos y llamadas estándar…' },
       { name: 'Corrección con IA', detail: 'Generando parche asistido…' },
@@ -234,11 +347,20 @@ function LayerProgress({ mode }) {
   const steps = stepsMap[mode] ?? stepsMap.text
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveStep(s => (s < steps.length - 1 ? s + 1 : s))
-    }, 850)
-    return () => clearInterval(timer)
-  }, [steps.length])
+    if (streamStep?.layer !== undefined) {
+      setActiveStep(streamStep.layer)
+    }
+  }, [streamStep])
+
+  useEffect(() => {
+    // Fallback timer if SSE is slow or offline
+    if (streamStep?.layer === undefined) {
+      const timer = setInterval(() => {
+        setActiveStep(s => (s < steps.length - 1 ? s + 1 : s))
+      }, 900)
+      return () => clearInterval(timer)
+    }
+  }, [steps.length, streamStep])
 
   return (
     <div style={{
@@ -311,7 +433,7 @@ function LayerProgress({ mode }) {
                 <p style={{ fontSize: '12px', fontWeight: current ? 600 : 400, color: textCol }}>
                   {st.name}
                 </p>
-                {current && <p style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: 2 }}>{st.detail}</p>}
+                {current && <p style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: 2 }}>{streamStep?.detail || st.detail}</p>}
               </div>
             </div>
           )

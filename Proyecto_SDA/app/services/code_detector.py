@@ -1,10 +1,10 @@
 """
-CodeHallucinationDetector — Identifies hallucinations in source code (Python).
+CodeHallucinationDetector — Identifies hallucinations in source code (Python & JavaScript/TypeScript).
 
 Detects:
 1. Syntax / AST parsing errors with exact line numbers.
-2. Hallucinated / ghost packages (not in stdlib and not on PyPI).
-3. Non-existent methods/attributes in standard libraries and popular packages.
+2. Hallucinated / ghost packages on PyPI and npm registries (detecting slopsquatting vectors).
+3. Fabricated methods and APIs in Python stdlib and JavaScript/Node.js runtime.
 4. AI-powered code correction and explanation.
 """
 from __future__ import annotations
@@ -15,14 +15,15 @@ from typing import List, Dict, Optional, Set
 import httpx
 from pydantic import BaseModel, Field
 
-# Cache to avoid repetitive network calls for PyPI package verification
+# Cache to avoid repetitive network calls
 _PYPI_CACHE: Dict[str, bool] = {}
+_NPM_CACHE: Dict[str, bool] = {}
 
 # Set of standard library modules in current Python runtime
 _STDLIB_MODULES: Set[str] = getattr(sys, "stdlib_module_names", set())
 
 # Common verified top packages in Python ecosystem
-_POPULAR_PACKAGES = {
+_POPULAR_PYTHON_PACKAGES = {
     "numpy", "pandas", "scipy", "matplotlib", "seaborn", "scikit-learn", "sklearn",
     "torch", "torchvision", "torchaudio", "tensorflow", "keras",
     "requests", "httpx", "urllib3", "aiohttp", "fastapi", "flask", "django",
@@ -35,8 +36,34 @@ _POPULAR_PACKAGES = {
     "cryptography", "jwt", "pyjwt", "bcrypt", "celery", "redis", "alembic",
 }
 
-# Catalog of frequently hallucinated module attributes / functions
-_KNOWN_HALLUCINATED_ATTRIBUTES: Dict[str, Dict[str, str]] = {
+# Standard Node.js built-in modules
+_NODE_STDLIB = {
+    "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
+    "constants", "crypto", "dgram", "diagnostics_channel", "dns", "domain",
+    "events", "fs", "fs/promises", "http", "http2", "https", "inspector",
+    "module", "net", "os", "path", "path/posix", "path/win32", "perf_hooks",
+    "process", "punycode", "querystring", "readline", "repl", "stream",
+    "stream/promises", "stream/consumers", "stream/web", "string_decoder",
+    "timers", "timers/promises", "tls", "trace_events", "tty", "url", "util",
+    "v8", "vm", "wasi", "worker_threads", "zlib", "test"
+}
+
+# Popular verified npm packages
+_POPULAR_NPM_PACKAGES = {
+    "react", "react-dom", "vue", "svelte", "next", "nuxt", "express", "koa", "fastify",
+    "axios", "lodash", "underscore", "dayjs", "moment", "date-fns", "zod", "yup", "joi",
+    "tailwindcss", "postcss", "autoprefixer", "vite", "webpack", "rollup", "esbuild",
+    "typescript", "eslint", "prettier", "jest", "vitest", "mocha", "chai", "cypress",
+    "zustand", "redux", "@reduxjs/toolkit", "mobx", "lucide-react", "feather-icons",
+    "bcrypt", "bcryptjs", "jsonwebtoken", "dotenv", "cors", "helmet", "morgan",
+    "pg", "mysql2", "sqlite3", "prisma", "@prisma/client", "mongoose", "typeorm",
+    "@tanstack/react-query", "swr", "socket.io", "socket.io-client", "uuid", "nanoid",
+    "chalk", "commander", "yargs", "inquirer", "ora", "rxjs", "rxjs/operators",
+    "three", "@types/node", "@types/react", "@types/react-dom", "cheerio"
+}
+
+# Catalog of frequently hallucinated module attributes in Python
+_KNOWN_HALLUCINATED_PYTHON_ATTRIBUTES: Dict[str, Dict[str, str]] = {
     "math": {
         "is_prime": "math.is_prime no existe en Python. Usa una función propia o sympy.isprime.",
         "fibonacci": "math.fibonacci no existe en la librería estándar de Python.",
@@ -68,33 +95,76 @@ _KNOWN_HALLUCINATED_ATTRIBUTES: Dict[str, Dict[str, str]] = {
     },
 }
 
+# Catalog of frequently hallucinated APIs in JavaScript / Node.js
+_KNOWN_HALLUCINATED_JS_APIS = [
+    (r"\bArray\.prototype\.flatDeep\b|\b\.flatDeep\(", "flatDeep() no existe en JavaScript. Utiliza .flat(Infinity) o recursión."),
+    (r"\b\.unique\(\)", ".unique() no es un método nativo de Array en JS. Utiliza [...new Set(arr)] o lodash.uniq()."),
+    (r"\bObject\.clone\b", "Object.clone() no existe en JS estándar. Utiliza structuredClone() o Object.assign({}, obj)."),
+    (r"\bJSON\.validate\b", "JSON.validate() no existe en el objeto global JSON. Usa un try/catch con JSON.parse() o un validador como Zod."),
+    (r"\bfetch\.json\b", "fetch.json() no existe. La llamada global es fetch(url) y luego response.json()."),
+    (r"\bfs\.readSyncSafe\b|\bfs\.writeSyncSafe\b", "fs.*SyncSafe no existe en Node.js. Usa fs.readFileSync dentro de try/catch."),
+    (r"\bMath\.randomInt\b", "Math.randomInt() no existe en JavaScript estándar. Utiliza Math.floor(Math.random() * (max - min) + min)."),
+    (r"\bThread\.sleep\b", "Thread.sleep() no existe en JavaScript. Utiliza await new Promise(r => setTimeout(r, ms))."),
+    (r"\bPromise\.sleep\b", "Promise.sleep() no es nativo. Usa new Promise(r => setTimeout(r, ms))."),
+    (r"\bString\.prototype\.capitalize\b|\b\.capitalize\(\)", ".capitalize() no es un método nativo de String en JS estándar."),
+]
 
 from app.models.analysis import CodeIssue, CodeAnalysisResult
-
 
 
 class CodeHallucinationDetector:
     def __init__(self):
         self._http_client = httpx.AsyncClient(timeout=4.0)
 
+    def detect_language(self, code: str, language_hint: str = "auto") -> str:
+        if language_hint in ("javascript", "typescript", "js", "ts"):
+            return "javascript"
+        if language_hint in ("python", "py"):
+            return "python"
+
+        js_markers = [
+            r"\b(const|let|var)\s+\w+",
+            r"\bfunction\s*\w*\s*\(",
+            r"=>",
+            r"\bconsole\.log\(",
+            r"\bimport\s+.*\s+from\s+['\"]",
+            r"\brequire\s*\(['\"]",
+            r"\bexport\s+(default|const|function|class)",
+            r"\binterface\s+\w+\s*\{",
+            r"\btype\s+\w+\s*=",
+        ]
+        py_markers = [
+            r"\bdef\s+\w+\s*\(",
+            r"\bclass\s+\w+(\(.*\))?\s*:",
+            r"\bfrom\s+\w+\s+import\b",
+            r"\bimport\s+\w+",
+            r"\belif\b",
+            r"\bself\.",
+            r"\b__init__\b",
+            r":\s*$",
+        ]
+
+        js_score = sum(1 for p in js_markers if re.search(p, code, re.MULTILINE))
+        py_score = sum(1 for p in py_markers if re.search(p, code, re.MULTILINE))
+
+        return "javascript" if js_score > py_score else "python"
+
     async def analyze(
         self,
         code: str,
-        language: str = "python",
+        language: str = "auto",
         check_pypi: bool = True,
         ai_correction: bool = False,
         llm_client = None,
         llm_provider: str = "ollama",
     ) -> CodeAnalysisResult:
-        """Analyzes code snippet for syntax, hallucinated imports and fabricated APIs."""
+        """Analyzes code snippet in Python or JavaScript/TypeScript."""
         code = code.strip()
-        issues: List[CodeIssue] = []
-        hallucinated_pkgs: List[str] = []
-        ast_metrics: Dict[str, int] = {}
-        is_valid_syntax = True
+        detected_lang = self.detect_language(code, language)
 
         if not code:
             return CodeAnalysisResult(
+                language=detected_lang,
                 is_valid_syntax=False,
                 confidence_score=0.0,
                 risk_level="high",
@@ -106,7 +176,39 @@ class CodeHallucinationDetector:
                 )]
             )
 
-        # 1. Parse AST to check syntax
+        if detected_lang == "javascript":
+            return await self._analyze_javascript(
+                code=code,
+                check_npm=check_pypi,
+                ai_correction=ai_correction,
+                llm_client=llm_client,
+                llm_provider=llm_provider
+            )
+
+        return await self._analyze_python(
+            code=code,
+            check_pypi=check_pypi,
+            ai_correction=ai_correction,
+            llm_client=llm_client,
+            llm_provider=llm_provider
+        )
+
+    # -------------------------------------------------------------
+    # Python Analysis Engine (AST + PyPI)
+    # -------------------------------------------------------------
+    async def _analyze_python(
+        self,
+        code: str,
+        check_pypi: bool,
+        ai_correction: bool,
+        llm_client,
+        llm_provider: str,
+    ) -> CodeAnalysisResult:
+        issues: List[CodeIssue] = []
+        hallucinated_pkgs: List[str] = []
+        ast_metrics: Dict[str, int] = {}
+        is_valid_syntax = True
+
         tree = None
         try:
             tree = ast.parse(code)
@@ -123,16 +225,13 @@ class CodeHallucinationDetector:
                 suggestion="Revisa la sintaxis, comillas sin cerrar o indentación incorrecta.",
             ))
 
-        # 2. If tree parsed successfully, inspect imports and calls
         if tree is not None:
-            # Check imports for ghost/hallucinated packages
-            imported_modules = self._extract_imports(tree)
+            imported_modules = self._extract_python_imports(tree)
             for mod_info in imported_modules:
                 root_pkg = mod_info["name"].split(".")[0]
-                if root_pkg in _STDLIB_MODULES or root_pkg.lower() in _POPULAR_PACKAGES or root_pkg == "__future__":
+                if root_pkg in _STDLIB_MODULES or root_pkg.lower() in _POPULAR_PYTHON_PACKAGES or root_pkg == "__future__":
                     continue
 
-                # Check if package exists on PyPI
                 if check_pypi:
                     exists = await self._verify_pypi_package(root_pkg)
                     if not exists:
@@ -146,25 +245,24 @@ class CodeHallucinationDetector:
                             suggestion=f"Verifica el nombre del paquete o busca alternativas verificadas en PyPI.",
                         ))
 
-            # Check calls for fabricated attributes/functions
-            api_issues = self._check_hallucinated_apis(tree)
+            api_issues = self._check_hallucinated_python_apis(tree)
             issues.extend(api_issues)
 
-        # 3. Calculate confidence and risk
         confidence, risk = self._calculate_score(is_valid_syntax, issues)
 
-        # 4. AI-assisted correction if requested
         corrected_code = None
         ai_explanation = None
         if ai_correction and llm_client and issues:
             corrected_code, ai_explanation = await self._generate_ai_correction(
                 code=code,
+                language="Python",
                 issues=issues,
                 llm_client=llm_client,
                 provider=llm_provider,
             )
 
         return CodeAnalysisResult(
+            language="python",
             is_valid_syntax=is_valid_syntax,
             confidence_score=confidence,
             risk_level=risk,
@@ -175,7 +273,104 @@ class CodeHallucinationDetector:
             ai_explanation=ai_explanation,
         )
 
-    def _extract_imports(self, tree: ast.AST) -> List[Dict]:
+    # -------------------------------------------------------------
+    # JavaScript / TypeScript Analysis Engine (npm & API scanner)
+    # -------------------------------------------------------------
+    async def _analyze_javascript(
+        self,
+        code: str,
+        check_npm: bool,
+        ai_correction: bool,
+        llm_client,
+        llm_provider: str,
+    ) -> CodeAnalysisResult:
+        issues: List[CodeIssue] = []
+        hallucinated_pkgs: List[str] = []
+        is_valid_syntax = True
+
+        # 1. Structural balance check (braces, parens, quotes)
+        syntax_err = self._check_js_syntax(code)
+        if syntax_err:
+            is_valid_syntax = False
+            issues.append(syntax_err)
+
+        # 2. Extract imports (ESM & CommonJS)
+        imports = self._extract_js_imports(code)
+        for imp in imports:
+            pkg_name = imp["package"]
+            # Exclude relative imports
+            if pkg_name.startswith((".", "/")):
+                continue
+
+            # Strip node: prefix
+            norm_pkg = pkg_name[5:] if pkg_name.startswith("node:") else pkg_name
+            root_pkg = norm_pkg.split("/")[0] if not norm_pkg.startswith("@") else "/".join(norm_pkg.split("/")[:2])
+
+            if root_pkg in _NODE_STDLIB or root_pkg in _POPULAR_NPM_PACKAGES:
+                continue
+
+            if check_npm:
+                exists = await self._verify_npm_package(root_pkg)
+                if not exists:
+                    hallucinated_pkgs.append(root_pkg)
+                    issues.append(CodeIssue(
+                        category="hallucinated_package",
+                        severity="high",
+                        line_number=imp["line"],
+                        symbol=root_pkg,
+                        message=f"Librería alucinada en npm (Riesgo de Slopsquatting): '{root_pkg}' no existe en el registro oficial de npm.",
+                        suggestion="Verifica el nombre del paquete en npmjs.com o comprueba la ortografía.",
+                    ))
+
+        # 3. Detect known hallucinated Web / JS APIs
+        lines = code.split("\n")
+        for line_idx, line in enumerate(lines, 1):
+            for pattern, msg in _KNOWN_HALLUCINATED_JS_APIS:
+                match = re.search(pattern, line)
+                if match:
+                    issues.append(CodeIssue(
+                        category="hallucinated_api",
+                        severity="high",
+                        line_number=line_idx,
+                        symbol=match.group(0),
+                        message=f"API de JavaScript inexistente: {msg}",
+                        suggestion="Consulta MDN Web Docs para la API estándar moderna.",
+                    ))
+
+        # Basic metrics
+        ast_metrics = {
+            "functions": len(re.findall(r"\bfunction\b|=>", code)),
+            "imports": len(imports),
+            "classes": len(re.findall(r"\bclass\s+\w+", code)),
+            "calls": len(re.findall(r"\b\w+\(", code)),
+        }
+
+        confidence, risk = self._calculate_score(is_valid_syntax, issues)
+
+        corrected_code = None
+        ai_explanation = None
+        if ai_correction and llm_client and issues:
+            corrected_code, ai_explanation = await self._generate_ai_correction(
+                code=code,
+                language="JavaScript / TypeScript",
+                issues=issues,
+                llm_client=llm_client,
+                provider=llm_provider,
+            )
+
+        return CodeAnalysisResult(
+            language="javascript",
+            is_valid_syntax=is_valid_syntax,
+            confidence_score=confidence,
+            risk_level=risk,
+            issues=issues,
+            hallucinated_packages=hallucinated_pkgs,
+            ast_metrics=ast_metrics,
+            corrected_code=corrected_code,
+            ai_explanation=ai_explanation,
+        )
+
+    def _extract_python_imports(self, tree: ast.AST) -> List[Dict]:
         imports = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -186,15 +381,14 @@ class CodeHallucinationDetector:
                     imports.append({"name": node.module, "line": node.lineno})
         return imports
 
-    def _check_hallucinated_apis(self, tree: ast.AST) -> List[CodeIssue]:
+    def _check_hallucinated_python_apis(self, tree: ast.AST) -> List[CodeIssue]:
         issues = []
         for node in ast.walk(tree):
-            # Check attribute access e.g., math.is_prime(...)
             if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
                 module_name = node.value.id
                 attr_name = node.attr
-                if module_name in _KNOWN_HALLUCINATED_ATTRIBUTES:
-                    hallu_dict = _KNOWN_HALLUCINATED_ATTRIBUTES[module_name]
+                if module_name in _KNOWN_HALLUCINATED_PYTHON_ATTRIBUTES:
+                    hallu_dict = _KNOWN_HALLUCINATED_PYTHON_ATTRIBUTES[module_name]
                     if attr_name in hallu_dict:
                         issues.append(CodeIssue(
                             category="hallucinated_api",
@@ -205,6 +399,66 @@ class CodeHallucinationDetector:
                             suggestion=f"Revisa la documentación oficial de {module_name}.",
                         ))
         return issues
+
+    def _extract_js_imports(self, code: str) -> List[Dict]:
+        imports = []
+        lines = code.split("\n")
+        esm_pattern = re.compile(r"""(?:import\s+(?:[\w*\s{},]*\s+from\s+)?|import\s*\(\s*)['"]([^'"]+)['"]""")
+        cjs_pattern = re.compile(r"""require\s*\(\s*['"]([^'"]+)['"]\s*\)""")
+
+        for line_num, line in enumerate(lines, 1):
+            for match in esm_pattern.finditer(line):
+                imports.append({"package": match.group(1), "line": line_num})
+            for match in cjs_pattern.finditer(line):
+                imports.append({"package": match.group(1), "line": line_num})
+        return imports
+
+    def _check_js_syntax(self, code: str) -> Optional[CodeIssue]:
+        # Balance stack for braces/brackets/parentheses
+        stack = []
+        pairs = {')': '(', '}': '{', ']': '['}
+        lines = code.split("\n")
+
+        for line_idx, line in enumerate(lines, 1):
+            # Strip simple comments
+            clean_line = re.sub(r"//.*$", "", line)
+            for col_idx, char in enumerate(clean_line, 1):
+                if char in '({[':
+                    stack.append((char, line_idx, col_idx))
+                elif char in ')}]':
+                    if not stack:
+                        return CodeIssue(
+                            category="syntax",
+                            severity="high",
+                            line_number=line_idx,
+                            column=col_idx,
+                            symbol=char,
+                            message=f"Error de sintaxis: Cierre '{char}' inesperado sin apertura previa.",
+                            suggestion="Revisa la concordancia de llaves y paréntesis.",
+                        )
+                    top_char, top_line, _ = stack.pop()
+                    if pairs[char] != top_char:
+                        return CodeIssue(
+                            category="syntax",
+                            severity="high",
+                            line_number=line_idx,
+                            column=col_idx,
+                            symbol=char,
+                            message=f"Error de sintaxis: Se esperaba el cierre de '{top_char}' abierto en la línea {top_line}, pero se encontró '{char}'.",
+                            suggestion="Verifica el orden de anidamiento de bloques.",
+                        )
+        if stack:
+            unclosed, line_no, col = stack[-1]
+            return CodeIssue(
+                category="syntax",
+                severity="high",
+                line_number=line_no,
+                column=col,
+                symbol=unclosed,
+                message=f"Error de sintaxis: Bloque '{unclosed}' sin cerrar.",
+                suggestion=f"Añade el cierre correspondiente para '{unclosed}'.",
+            )
+        return None
 
     def _calculate_ast_metrics(self, tree: ast.AST) -> Dict[str, int]:
         functions = 0
@@ -239,7 +493,20 @@ class CodeHallucinationDetector:
             _PYPI_CACHE[norm_name] = exists
             return exists
         except Exception:
-            # If PyPI is unreachable, fail gracefully without reporting false positive
+            return True
+
+    async def _verify_npm_package(self, package_name: str) -> bool:
+        norm_name = package_name.lower().strip()
+        if norm_name in _NPM_CACHE:
+            return _NPM_CACHE[norm_name]
+
+        try:
+            url = f"https://registry.npmjs.org/{norm_name}"
+            res = await self._http_client.get(url)
+            exists = res.status_code == 200
+            _NPM_CACHE[norm_name] = exists
+            return exists
+        except Exception:
             return True
 
     def _calculate_score(self, is_valid_syntax: bool, issues: List[CodeIssue]) -> tuple[float, str]:
@@ -269,6 +536,7 @@ class CodeHallucinationDetector:
     async def _generate_ai_correction(
         self,
         code: str,
+        language: str,
         issues: List[CodeIssue],
         llm_client,
         provider: str,
@@ -279,16 +547,16 @@ class CodeHallucinationDetector:
                 for i in issues
             )
             prompt = f"""Eres un ingeniero de software senior y experto en depurar alucinaciones de código generado por LLMs.
-Detectamos las siguientes alucinaciones o errores en este código Python:
+Detectamos las siguientes alucinaciones o errores en este código ({language}):
 {issues_summary}
 
 Código original con errores:
-```python
+```{language.lower()}
 {code}
 ```
 
 Instrucciones:
-1. Proporciona el código Python corregido y 100% funcional (reemplazando librerías o métodos alucinados por equivalentes reales).
+1. Proporciona el código ({language}) corregido y 100% funcional (reemplazando librerías o métodos alucinados por equivalentes reales).
 2. Explica brevemente en español qué alucinaciones corregiste.
 
 Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
@@ -300,7 +568,6 @@ No incluyas texto fuera del JSON."""
 
             raw = await llm_client._query(prompt, provider)
             import json
-            # Extract JSON block
             match = re.search(r"\{[\s\S]*\}", raw)
             if match:
                 data = json.loads(match.group())

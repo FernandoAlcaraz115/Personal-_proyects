@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { analyzeText } from '../api/client'
+import { analyzeText, analyzeTextStream } from '../api/client'
 
 const STORAGE_KEY = 'attestly_history_v1'
 
@@ -34,13 +34,15 @@ const useAnalysisStore = create((set, get) => ({
   result: null,
   loading: false,
   error: null,
+  currentStreamStep: null,
 
-  // History & Comparison
+  // History & Comparison & Benchmarks
   history: loadInitialHistory(),
   compareItemA: null,
   compareItemB: null,
   isCompareOpen: false,
   isHistoryOpen: false,
+  isBenchmarkOpen: false,
 
   setMode: (mode) => set({ mode, result: null, error: null }),
   setText: (text) => set({ text }),
@@ -53,6 +55,7 @@ const useAnalysisStore = create((set, get) => ({
 
   setIsHistoryOpen: (open) => set({ isHistoryOpen: open }),
   setIsCompareOpen: (open) => set({ isCompareOpen: open }),
+  setIsBenchmarkOpen: (open) => set({ isBenchmarkOpen: open }),
 
   setCompareItemA: (item) => set({ compareItemA: item }),
   setCompareItemB: (item) => set({ compareItemB: item }),
@@ -93,18 +96,28 @@ const useAnalysisStore = create((set, get) => ({
 
   analyze: async () => {
     const { text, mode, provider, model, language, useExternal, useCorrection, scSamples } = get()
-    set({ loading: true, error: null, result: null })
+    set({ loading: true, error: null, result: null, currentStreamStep: { layer: 0 } })
+    const payload = {
+      text,
+      mode,
+      llm_provider: provider,
+      model,
+      language,
+      use_external_verification: useExternal,
+      use_ai_correction: useCorrection,
+      self_consistency_samples: scSamples,
+    }
+
     try {
-      const data = await analyzeText({
-        text,
-        mode,
-        llm_provider: provider,
-        model,
-        language,
-        use_external_verification: useExternal,
-        use_ai_correction: useCorrection,
-        self_consistency_samples: scSamples,
-      })
+      let data
+      try {
+        data = await analyzeTextStream(payload, (step) => {
+          set({ currentStreamStep: step })
+        })
+      } catch (streamErr) {
+        console.warn('Streaming SSE not available or failed, falling back to standard POST:', streamErr)
+        data = await analyzeText(payload)
+      }
 
       const historyEntry = {
         ...data,
@@ -114,12 +127,11 @@ const useAnalysisStore = create((set, get) => ({
       }
 
       get().addToHistory(historyEntry)
-
       set({ result: data })
     } catch (err) {
-      set({ error: err.response?.data?.detail ?? 'Error de conexión con el servidor.' })
+      set({ error: err.message || err.response?.data?.detail || 'Error de conexión con el servidor.' })
     } finally {
-      set({ loading: false })
+      set({ loading: false, currentStreamStep: null })
     }
   },
 
