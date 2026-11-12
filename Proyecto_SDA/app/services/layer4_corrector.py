@@ -37,13 +37,14 @@ _EXAMPLES = {
 
 class HallucinationCorrector:
     def __init__(self):
-        self._client = httpx.AsyncClient(timeout=60.0)
+        self._client = httpx.AsyncClient(timeout=15.0)
 
     async def correct(
         self,
         claim: str,
         wiki_snippet: str = "",
         provider: str = "ollama",
+        model: str = "llama3.2",
         language: str = "es",
     ) -> CorrectionResult:
         lang_name = _LANG_NAME.get(language, "Spanish")
@@ -56,7 +57,7 @@ class HallucinationCorrector:
         )
 
         try:
-            raw  = await self._query(prompt, provider)
+            raw  = await self._query(prompt, provider, model)
             data = self._parse_json(raw)
             if data:
                 return CorrectionResult(
@@ -86,33 +87,47 @@ class HallucinationCorrector:
                 pass
         return None
 
-    async def _query(self, prompt: str, provider: str) -> str:
+    async def _query(self, prompt: str, provider: str, model: str = "llama3.2") -> str:
         if provider == "openai":
-            return await self._openai(prompt)
+            return await self._openai(prompt, model)
         if provider == "gemini":
             return await self._gemini(prompt)
-        return await self._ollama(prompt)
+        return await self._ollama(prompt, model)
 
-    async def _ollama(self, prompt: str) -> str:
+    async def _ollama(self, prompt: str, model: str = "llama3.2") -> str:
+        target_model = model.strip() if model and model.strip() else settings.default_model
+        payload = {
+            "model": target_model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "options": {
+                "num_predict": 120,
+                "temperature": 0.1,
+                "top_p": 0.9,
+            }
+        }
         res = await self._client.post(
             f"{settings.ollama_base_url}/api/generate",
-            json={"model": settings.default_model, "prompt": prompt, "stream": False},
+            json=payload,
         )
         res.raise_for_status()
         return res.json()["response"]
 
-    async def _openai(self, prompt: str) -> str:
+    async def _openai(self, prompt: str, model: str = "gpt-4o-mini") -> str:
+        target_model = model if model and "gpt" in model else "gpt-4o-mini"
         res = await self._client.post(
             "https://api.openai.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {settings.openai_api_key}"},
             json={
-                "model": "gpt-4o-mini",
+                "model": target_model,
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 300,
-                "temperature": 0.0,
+                "max_tokens": 150,
+                "temperature": 0.1,
             },
         )
         res.raise_for_status()
+        return res.json()["choices"][0]["message"]["content"]
         return res.json()["choices"][0]["message"]["content"]
 
     async def _gemini(self, prompt: str) -> str:

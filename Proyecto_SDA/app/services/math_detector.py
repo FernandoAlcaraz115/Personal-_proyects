@@ -40,6 +40,7 @@ class MathHallucinationDetector:
         ai_correction: bool = False,
         llm_client = None,
         llm_provider: str = "ollama",
+        model: str = "llama3.2",
     ) -> MathAnalysisResult:
         """Extracts and verifies mathematical equations and arithmetic claims."""
         text = text.strip()
@@ -107,6 +108,7 @@ class MathHallucinationDetector:
                 failed_steps=[s for s in step_results if not s.is_valid],
                 llm_client=llm_client,
                 provider=llm_provider,
+                model=model,
             )
 
         return MathAnalysisResult(
@@ -220,6 +222,7 @@ class MathHallucinationDetector:
         failed_steps: List[MathStepResult],
         llm_client,
         provider: str,
+        model: str = "llama3.2",
     ) -> Tuple[Optional[str], Optional[str]]:
         try:
             steps_desc = "\n".join(
@@ -246,7 +249,7 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
 }}
 No incluyas markdown fuera del JSON."""
 
-            raw = await llm_client._query(prompt, provider)
+            raw = await llm_client._query(prompt, provider, model=model)
             import json
             match = re.search(r"\{[\s\S]*\}", raw)
             if match:

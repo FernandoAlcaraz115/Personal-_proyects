@@ -7,6 +7,7 @@ Supported modes:
 3. "math": SymPy symbolic & arithmetic equality verification + step-by-step reasoning breakdown
 """
 from __future__ import annotations
+import asyncio
 import time
 import uuid
 from app.models.analysis import (
@@ -50,6 +51,7 @@ class HallucinationDetector:
                 ai_correction=request.use_ai_correction,
                 llm_client=self.llm,
                 llm_provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
+                model=request.model,
             )
             elapsed_ms = int((time.time() - start) * 1000)
             lang_label = "npm" if code_res.language == "javascript" else "pypi"
@@ -73,6 +75,7 @@ class HallucinationDetector:
                 ai_correction=request.use_ai_correction,
                 llm_client=self.llm,
                 llm_provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
+                model=request.model,
             )
             elapsed_ms = int((time.time() - start) * 1000)
             return AnalysisResponse(
@@ -100,35 +103,41 @@ class HallucinationDetector:
             )
 
         results = []
+        l2_items = []
         for claim in claims_raw:
             l1 = await self.layer1.analyze(claim)
 
             l2 = None
             if request.use_external_verification:
                 l2 = await self.layer2.verify(claim, language=request.language)
+            l2_items.append(l2)
 
-            result = await self.layer3.score(
+            res = await self.layer3.score(
                 claim=claim,
                 l1_result=l1,
                 l2_result=l2,
                 sc_score=sc_scores.get("__global__"),
             )
+            results.append(res)
 
-            # Layer 4: AI correction
-            if request.use_ai_correction:
-                wiki_snippet = l2.snippet if l2 else ""
-                result.l4 = await self.layer4.correct(
-                    claim=claim,
+        # Layer 4: Parallel AI correction across all claims
+        if request.use_ai_correction and results:
+            async def _correct_claim(res, clm, l2_ref):
+                wiki_snippet = l2_ref.snippet if l2_ref else ""
+                prov = request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider)
+                res.l4 = await self.layer4.correct(
+                    claim=clm,
                     wiki_snippet=wiki_snippet,
-                    provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
+                    provider=prov,
+                    model=request.model,
                     language=request.language,
                 )
-                if result.l4 and result.l4.is_hallucination and result.l4.explanation != "AI correction unavailable.":
-                    result.confidence = round(min(result.confidence * 0.35, 0.40), 3)
-                    result.risk_level = "high"
-                    result.explanation += " IA confirmó alucinación."
+                if res.l4 and res.l4.is_hallucination and res.l4.explanation != "AI correction unavailable.":
+                    res.confidence = round(min(res.confidence * 0.35, 0.40), 3)
+                    res.risk_level = "high"
+                    res.explanation += " IA confirmó alucinación."
 
-            results.append(result)
+            await asyncio.gather(*[_correct_claim(r, c, l) for r, c, l in zip(results, claims_raw, l2_items)])
 
         overall = (
             round(sum(r.confidence for r in results) / len(results), 3)
@@ -169,6 +178,7 @@ class HallucinationDetector:
                 ai_correction=request.use_ai_correction,
                 llm_client=self.llm,
                 llm_provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
+                model=request.model,
             )
             reg_name = "npm" if code_res.language == "javascript" else "PyPI"
             yield {"event": "layer_progress", "data": {"layer": 1, "name": f"Registro de Paquetes ({reg_name})", "detail": f"Verificando dependencias en registro oficial {reg_name}..."}}
@@ -198,6 +208,7 @@ class HallucinationDetector:
                 ai_correction=request.use_ai_correction,
                 llm_client=self.llm,
                 llm_provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
+                model=request.model,
             )
             yield {"event": "layer_progress", "data": {"layer": 2, "name": "Delta Numérico", "detail": "Evaluando discrepancias..."}}
             if request.use_ai_correction:
@@ -231,35 +242,42 @@ class HallucinationDetector:
 
         yield {"event": "layer_progress", "data": {"layer": 1, "name": "Grounding Wikipedia / Fuentes", "detail": f"Contrastando {len(claims_raw)} afirmaciones..."}}
         results = []
+        l2_items = []
         for claim in claims_raw:
             l1 = await self.layer1.analyze(claim)
             l2 = None
             if request.use_external_verification:
                 l2 = await self.layer2.verify(claim, language=request.language)
+            l2_items.append(l2)
 
-            result = await self.layer3.score(
+            res = await self.layer3.score(
                 claim=claim,
                 l1_result=l1,
                 l2_result=l2,
                 sc_score=sc_scores.get("__global__"),
             )
-            if request.use_ai_correction:
-                wiki_snippet = l2.snippet if l2 else ""
-                result.l4 = await self.layer4.correct(
-                    claim=claim,
-                    wiki_snippet=wiki_snippet,
-                    provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
-                    language=request.language,
-                )
-                if result.l4 and result.l4.is_hallucination and result.l4.explanation != "AI correction unavailable.":
-                    result.confidence = round(min(result.confidence * 0.35, 0.40), 3)
-                    result.risk_level = "high"
-                    result.explanation += " IA confirmó alucinación."
-            results.append(result)
+            results.append(res)
 
         yield {"event": "layer_progress", "data": {"layer": 2, "name": "Scoring Adaptativo", "detail": "Ponderando matriz de riesgo..."}}
-        if request.use_ai_correction:
-            yield {"event": "layer_progress", "data": {"layer": 3, "name": "Auditoría IA", "detail": "Finalizando correcciones..."}}
+
+        if request.use_ai_correction and results:
+            yield {"event": "layer_progress", "data": {"layer": 3, "name": "Auditoría IA", "detail": f"Corrigiendo {len(results)} afirmaciones en paralelo..."}}
+            async def _correct_claim_stream(res, clm, l2_ref):
+                wiki_snippet = l2_ref.snippet if l2_ref else ""
+                prov = request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider)
+                res.l4 = await self.layer4.correct(
+                    claim=clm,
+                    wiki_snippet=wiki_snippet,
+                    provider=prov,
+                    model=request.model,
+                    language=request.language,
+                )
+                if res.l4 and res.l4.is_hallucination and res.l4.explanation != "AI correction unavailable.":
+                    res.confidence = round(min(res.confidence * 0.35, 0.40), 3)
+                    res.risk_level = "high"
+                    res.explanation += " IA confirmó alucinación."
+
+            await asyncio.gather(*[_correct_claim_stream(r, c, l) for r, c, l in zip(results, claims_raw, l2_items)])
 
         overall = (
             round(sum(r.confidence for r in results) / len(results), 3)

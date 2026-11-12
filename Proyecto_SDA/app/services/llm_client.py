@@ -11,10 +11,10 @@ from app.core.config import settings
 
 class LLMClient:
     def __init__(self):
-        self._client = httpx.AsyncClient(timeout=60.0)
+        self._client = httpx.AsyncClient(timeout=15.0)
 
     async def self_consistency(
-        self, text: str, n: int = 3, provider: str = "ollama"
+        self, text: str, n: int = 3, provider: str = "ollama", model: str = "llama3.2"
     ) -> dict:
         prompt = (
             "Rate the factual confidence of the following statement "
@@ -22,7 +22,7 @@ class LLMClient:
             "Reply with only a single number, nothing else.\n\n"
             f"Statement: {text}"
         )
-        tasks = [self._query(prompt, provider) for _ in range(n)]
+        tasks = [self._query(prompt, provider, model) for _ in range(n)]
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         scores = []
@@ -40,32 +40,43 @@ class LLMClient:
             return {}
         return {"__global__": round(sum(scores) / len(scores), 3)}
 
-    async def _query(self, prompt: str, provider: str) -> str:
+    async def _query(self, prompt: str, provider: str, model: str = "llama3.2") -> str:
         if provider == "ollama":
-            return await self._ollama(prompt)
+            return await self._ollama(prompt, model)
         if provider == "openai":
-            return await self._openai(prompt)
+            return await self._openai(prompt, model)
         if provider == "gemini":
             return await self._gemini(prompt)
         raise ValueError(f"Unknown provider: {provider}")
 
-    async def _ollama(self, prompt: str) -> str:
+    async def _ollama(self, prompt: str, model: str = "llama3.2") -> str:
+        target_model = model.strip() if model and model.strip() else settings.default_model
+        payload = {
+            "model": target_model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "num_predict": 150,
+                "temperature": 0.1,
+            }
+        }
         res = await self._client.post(
             f"{settings.ollama_base_url}/api/generate",
-            json={"model": settings.default_model, "prompt": prompt, "stream": False},
+            json=payload,
         )
         res.raise_for_status()
         return res.json()["response"]
 
-    async def _openai(self, prompt: str) -> str:
+    async def _openai(self, prompt: str, model: str = "gpt-4o-mini") -> str:
+        target_model = model if model and "gpt" in model else "gpt-4o-mini"
         res = await self._client.post(
             "https://api.openai.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {settings.openai_api_key}"},
             json={
-                "model": "gpt-4o-mini",
+                "model": target_model,
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 10,
-                "temperature": 0.0,
+                "max_tokens": 150,
+                "temperature": 0.1,
             },
         )
         res.raise_for_status()

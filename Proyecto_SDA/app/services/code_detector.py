@@ -157,6 +157,7 @@ class CodeHallucinationDetector:
         ai_correction: bool = False,
         llm_client = None,
         llm_provider: str = "ollama",
+        model: str = "llama3.2",
     ) -> CodeAnalysisResult:
         """Analyzes code snippet in Python or JavaScript/TypeScript."""
         code = code.strip()
@@ -182,7 +183,8 @@ class CodeHallucinationDetector:
                 check_npm=check_pypi,
                 ai_correction=ai_correction,
                 llm_client=llm_client,
-                llm_provider=llm_provider
+                llm_provider=llm_provider,
+                model=model,
             )
 
         return await self._analyze_python(
@@ -190,7 +192,8 @@ class CodeHallucinationDetector:
             check_pypi=check_pypi,
             ai_correction=ai_correction,
             llm_client=llm_client,
-            llm_provider=llm_provider
+            llm_provider=llm_provider,
+            model=model,
         )
 
     # -------------------------------------------------------------
@@ -203,6 +206,7 @@ class CodeHallucinationDetector:
         ai_correction: bool,
         llm_client,
         llm_provider: str,
+        model: str = "llama3.2",
     ) -> CodeAnalysisResult:
         issues: List[CodeIssue] = []
         hallucinated_pkgs: List[str] = []
@@ -259,6 +263,7 @@ class CodeHallucinationDetector:
                 issues=issues,
                 llm_client=llm_client,
                 provider=llm_provider,
+                model=model,
             )
 
         return CodeAnalysisResult(
@@ -283,6 +288,7 @@ class CodeHallucinationDetector:
         ai_correction: bool,
         llm_client,
         llm_provider: str,
+        model: str = "llama3.2",
     ) -> CodeAnalysisResult:
         issues: List[CodeIssue] = []
         hallucinated_pkgs: List[str] = []
@@ -356,6 +362,7 @@ class CodeHallucinationDetector:
                 issues=issues,
                 llm_client=llm_client,
                 provider=llm_provider,
+                model=model,
             )
 
         return CodeAnalysisResult(
@@ -540,6 +547,7 @@ class CodeHallucinationDetector:
         issues: List[CodeIssue],
         llm_client,
         provider: str,
+        model: str = "llama3.2",
     ) -> tuple[Optional[str], Optional[str]]:
         try:
             issues_summary = "\n".join(
@@ -566,7 +574,7 @@ Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
 }}
 No incluyas texto fuera del JSON."""
 
-            raw = await llm_client._query(prompt, provider)
+            raw = await llm_client._query(prompt, provider, model=model)
             import json
             match = re.search(r"\{[\s\S]*\}", raw)
             if match:
