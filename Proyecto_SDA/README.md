@@ -1,4 +1,4 @@
-# 🧠 HalluciDetect — Multi-Domain AI Hallucination Studio
+# 🧠 ATTESTLY — Multi-Domain AI Hallucination Studio
 
 Herramienta de auditoría y detección de alucinaciones en modelos de lenguaje grande (LLMs de caja negra) a través de tres dimensiones críticas: **Texto Fáctico**, **Código Fuente** y **Ecuaciones Matemáticas**.
 
@@ -78,6 +78,7 @@ pytest -v
 
 ```
 Proyecto_SDA/
+├── iniciar.bat          # Lanzador automático de ATTESTLY (Backend + Frontend)
 ├── app/
 │   ├── api/             # Endpoints FastAPI (/analyze, /health)
 │   ├── core/            # Configuración y Settings

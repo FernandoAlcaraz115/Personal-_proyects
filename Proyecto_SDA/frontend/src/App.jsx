@@ -3,9 +3,11 @@ import useAnalysisStore from './store/useAnalysisStore'
 import { translations } from './i18n'
 import TextInput from './components/TextInput'
 import ResultPanel from './components/ResultPanel'
+import HistoryDrawer from './components/HistoryDrawer'
+import CompareModal from './components/CompareModal'
 
 export default function App() {
-  const { language, setLanguage, mode, setMode } = useAnalysisStore()
+  const { language, setLanguage, mode, setMode, history, setIsHistoryOpen, setIsCompareOpen } = useAnalysisStore()
   const t = translations[language] ?? translations.es
   const [showHow, setShowHow] = useState(false)
 
@@ -85,7 +87,81 @@ export default function App() {
         </div>
 
         {/* Right action group */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* History Button */}
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            style={{
+              background: '#0d111a',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 6,
+              color: '#cbd5e1',
+              fontSize: 11,
+              fontWeight: 600,
+              padding: '5px 11px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all .15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#38bdf8'
+              e.currentTarget.style.color = '#38bdf8'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.color = '#cbd5e1'
+            }}
+          >
+            <span>📜</span>
+            <span>{t.navHistory}</span>
+            {history.length > 0 && (
+              <span
+                style={{
+                  background: 'rgba(56,189,248,0.18)',
+                  color: '#38bdf8',
+                  borderRadius: 10,
+                  padding: '1px 6px',
+                  fontSize: 10,
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {history.length}
+              </span>
+            )}
+          </button>
+
+          {/* Comparator Button */}
+          <button
+            onClick={() => setIsCompareOpen(true)}
+            style={{
+              background: '#0d111a',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 6,
+              color: '#cbd5e1',
+              fontSize: 11,
+              fontWeight: 600,
+              padding: '5px 11px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all .15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#c084fc'
+              e.currentTarget.style.color = '#c084fc'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.color = '#cbd5e1'
+            }}
+          >
+            <span>⚖️</span>
+            <span>{t.navCompare}</span>
+          </button>
+
           {/* Language toggle */}
           <button
             onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
@@ -205,7 +281,7 @@ export default function App() {
           fontSize: 12, display: 'flex', flexDirection: 'column', gap: 6,
         }}>
           <p>
-            🧠 <strong>HalluciDetect</strong> · Arquitectura de Auditoría Tripartita (Factual · AST Code · SymPy Math)
+            🧠 <strong>ATTESTLY</strong> · Arquitectura de Auditoría Tripartita (Factual · AST Code · SymPy Math)
           </p>
           <p style={{ fontSize: 11 }}>
             Desarrollado para sistemas distribuidos y detección de alucinaciones en modelos de lenguaje de caja negra.
@@ -304,6 +380,10 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* History Drawer & Comparison Modal */}
+      <HistoryDrawer />
+      <CompareModal />
 
     </div>
   )

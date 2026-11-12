@@ -17,7 +17,7 @@ _WIKIPEDIA_API = "https://{lang}.wikipedia.org/w/api.php"
 _WIKIPEDIA_URL  = "https://{lang}.wikipedia.org/wiki/{title}"
 
 _HEADERS = {
-    "User-Agent": "HalluciDetect/1.0 (educational hallucination detector; contact: dev@example.com)"
+    "User-Agent": "ATTESTLY/2.0 (educational hallucination detector; contact: dev@example.com)"
 }
 
 _COMMON_STARTERS = {

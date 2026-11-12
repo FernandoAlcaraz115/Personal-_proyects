@@ -5,7 +5,7 @@ router = APIRouter()
 
 _WIKI_TEST_URL = "https://es.wikipedia.org/w/api.php"
 _HEADERS = {
-    "User-Agent": "HalluciDetect/1.0 (educational hallucination detector; contact: dev@example.com)"
+    "User-Agent": "ATTESTLY/2.0 (educational hallucination detector; contact: dev@example.com)"
 }
 
 

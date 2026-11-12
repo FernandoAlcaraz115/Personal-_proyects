@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import analysis, health
 
 app = FastAPI(
-    title="HalluciDetect API",
+    title="ATTESTLY API",
     description="Detección de alucinaciones en LLMs",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(
@@ -22,4 +22,4 @@ app.include_router(analysis.router, prefix="/api/v1")
 
 @app.get("/")
 def root():
-    return {"status": "ok", "project": "HalluciDetect"}
+    return {"status": "ok", "project": "ATTESTLY"}

@@ -1,6 +1,6 @@
 export const translations = {
   es: {
-    navTitle: 'HalluciDetect',
+    navTitle: 'ATTESTLY',
     navSubtitle: 'AI Hallucination Studio',
     navHowItWorks: '¿Cómo funciona?',
     navStatus: 'Multi-Domain Engine Activo',
@@ -101,13 +101,32 @@ export const translations = {
     correctedLabel: 'Corrección Recomendada',
 
     // Modal
-    howTitle: 'Arquitectura de HalluciDetect',
-    howIntro: 'HalluciDetect combina técnicas de caja negra, análisis estático de código y verificación simbólica formal para interceptar alucinaciones en tres dimensiones críticas.',
+    howTitle: 'Arquitectura de ATTESTLY',
+    howIntro: 'ATTESTLY combina técnicas de caja negra, análisis estático de código y verificación simbólica formal para interceptar alucinaciones en tres dimensiones críticas.',
     howClose: 'Cerrar',
+
+    // History & Compare
+    navHistory: 'Historial',
+    navCompare: 'Comparador',
+    historyTitle: 'Historial de Auditorías',
+    historySubtitle: 'Registro local de análisis previos y diagnósticos guardados',
+    historyEmpty: 'Aún no hay análisis registrados en el historial.',
+    historyLoad: 'Cargar en Editor',
+    historyDelete: 'Eliminar',
+    historyClearAll: 'Vaciar Historial',
+    compareTitle: 'Comparador de Modelos / Respuestas',
+    compareSubtitle: 'Compara dos análisis cara a cara para medir alucinaciones y rendimiento',
+    compareSelectA: 'Seleccionar Análisis A (Base)',
+    compareSelectB: 'Seleccionar Análisis B (Comparativa)',
+    comparePickPlaceholder: 'Elige un análisis del historial…',
+    compareDiffMetric: 'Diferencia de Confianza',
+    compareIdentical: 'Mismo nivel de confianza',
+    compareWinner: 'Mejor resultado',
+    compareClose: 'Cerrar Comparador',
   },
 
   en: {
-    navTitle: 'HalluciDetect',
+    navTitle: 'ATTESTLY',
     navSubtitle: 'AI Hallucination Studio',
     navHowItWorks: 'How it works?',
     navStatus: 'Multi-Domain Engine Active',
@@ -208,8 +227,27 @@ export const translations = {
     correctedLabel: 'Recommended Correction',
 
     // Modal
-    howTitle: 'HalluciDetect Architecture',
-    howIntro: 'HalluciDetect combines black-box heuristics, static code AST inspection, and formal symbolic verification to intercept AI hallucinations across three critical domains.',
+    howTitle: 'ATTESTLY Architecture',
+    howIntro: 'ATTESTLY combines black-box heuristics, static code AST inspection, and formal symbolic verification to intercept AI hallucinations across three critical domains.',
     howClose: 'Close',
+
+    // History & Compare
+    navHistory: 'History',
+    navCompare: 'Compare',
+    historyTitle: 'Audit History',
+    historySubtitle: 'Local persistent record of previous checks and diagnoses',
+    historyEmpty: 'No previous analyses recorded in history yet.',
+    historyLoad: 'Load in Editor',
+    historyDelete: 'Delete',
+    historyClearAll: 'Clear History',
+    compareTitle: 'Model & Response Comparator',
+    compareSubtitle: 'Side-by-side comparison to measure hallucinations and reliability',
+    compareSelectA: 'Select Analysis A (Baseline)',
+    compareSelectB: 'Select Analysis B (Comparison)',
+    comparePickPlaceholder: 'Pick an analysis from history…',
+    compareDiffMetric: 'Confidence Difference',
+    compareIdentical: 'Identical confidence level',
+    compareWinner: 'Better performance',
+    compareClose: 'Close Comparator',
   },
 }

@@ -1,5 +1,5 @@
 """
-Punto de entrada principal para HalluciDetect.
+Punto de entrada principal para ATTESTLY.
 Permite ejecutar directamente con: python main.py
 O con: uvicorn app.main:app --reload
 """
