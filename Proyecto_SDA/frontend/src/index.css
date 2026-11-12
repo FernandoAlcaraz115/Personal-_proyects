@@ -1,3 +1,8 @@
+/* ==========================================================================
+   ATTESTLY DESIGN SYSTEM — Raycast & macOS Dark Minimalist Workstation
+   Precision, deep monochrome black, subtle ambient depth & keyboard-first
+   ========================================================================== */
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -5,141 +10,168 @@
 }
 
 :root {
-  --bg: #06070a;
-  --bg-gradient: radial-gradient(circle at 50% -20%, #17112b 0%, #06070a 70%);
-  --surface: #0b0e14;
-  --surface-glass: rgba(12, 16, 25, 0.75);
-  --surface-card: #0f131d;
-  --surface-card-hover: #141926;
-  --surface-elevated: #181d2a;
+  /* Deep Obsidian Base Palette */
+  --bg-desktop: #080808;
+  --bg-window: rgba(18, 18, 19, 0.88);
+  --bg-window-solid: #121213;
+  --bg-surface: #18181b;
+  --bg-surface-elevated: #202024;
+  --bg-surface-hover: #27272b;
+  --bg-surface-active: #323238;
+
+  /* Raycast-style hairline borders */
+  --border-hairline: rgba(255, 255, 255, 0.07);
+  --border-muted: rgba(255, 255, 255, 0.11);
+  --border-active: rgba(255, 255, 255, 0.22);
+  --border-focus: #ffffff;
+
+  /* Typography Colors */
+  --text-main: #ededed;
+  --text-secondary: #999999;
+  --text-tertiary: #666666;
+  --text-muted: #444444;
+
+  /* Pure Functional Accents (Strictly non-decorative) */
+  --accent-white: #ffffff;
+  --accent-blue: #3b82f6;
   
-  --border: rgba(255, 255, 255, 0.08);
-  --border-light: rgba(255, 255, 255, 0.12);
-  --border-neon-cyan: rgba(6, 182, 212, 0.4);
-  --border-neon-violet: rgba(139, 92, 246, 0.4);
-  
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  --text-dark: #334155;
-  
-  --cyan: #06b6d4;
-  --cyan-glow: rgba(6, 182, 212, 0.25);
-  --violet: #8b5cf6;
-  --violet-glow: rgba(139, 92, 246, 0.25);
-  --pink: #ec4899;
-  --green: #10b981;
-  --green-glow: rgba(16, 185, 129, 0.2);
-  --orange: #f59e0b;
-  --orange-glow: rgba(245, 158, 11, 0.2);
-  --red: #f43f5e;
-  --red-glow: rgba(244, 63, 94, 0.25);
-  
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Outfit', var(--font-sans);
-  --font-mono: 'JetBrains Mono', Consolas, Monaco, monospace;
+  /* Status Semantics */
+  --status-success: #10b981;
+  --status-success-subtle: rgba(16, 185, 129, 0.12);
+  --status-warn: #f59e0b;
+  --status-warn-subtle: rgba(245, 158, 11, 0.12);
+  --status-error: #ef4444;
+  --status-error-subtle: rgba(239, 68, 68, 0.12);
+
+  /* Geometry & Elevation */
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-window: 18px;
+
+  /* macOS Ambient Glass Shadows */
+  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.75), 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.55);
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.35);
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", sans-serif;
+  --font-mono: "SF Mono", "Geist Mono", "JetBrains Mono", Menlo, monospace;
 }
 
 body {
   font-family: var(--font-sans);
-  background: var(--bg);
-  background-image: var(--bg-gradient);
-  background-attachment: fixed;
+  background-color: var(--bg-desktop);
   color: var(--text-main);
   min-height: 100vh;
-  line-height: 1.6;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
 }
 
-/* Custom Cyberpunk Scrollbar */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #080a0f;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e2638;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e3b56;
+  background: rgba(255, 255, 255, 0.22);
 }
 
-/* Base button and input resets */
+/* Base resets */
 button {
   font-family: var(--font-sans);
   cursor: pointer;
   border: none;
+  background: transparent;
   outline: none;
-  background: none;
+  color: inherit;
+  transition: all 0.12s ease;
 }
 
 textarea, input, select {
   font-family: var(--font-sans);
   outline: none;
+  color: var(--text-main);
 }
 
-code, pre {
+code, pre, .font-mono {
   font-family: var(--font-mono);
 }
 
-/* Neon glow animations */
-@keyframes neonPulse {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(6, 182, 212, 0.2), inset 0 0 10px rgba(6, 182, 212, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(6, 182, 212, 0.4), inset 0 0 15px rgba(6, 182, 212, 0.2);
-  }
+/* Raycast / macOS Floating Window Card */
+.raycast-window {
+  background: var(--bg-window);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-window);
+  box-shadow: var(--shadow-window);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  overflow: hidden;
 }
 
-@keyframes violetPulse {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.45);
-  }
+.raycast-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-subtle);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-@keyframes subtleFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+.raycast-panel:hover {
+  border-color: var(--border-muted);
 }
 
-@keyframes spinSlow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* Keyboard Shortcut Key Caps (Kbd) */
+kbd, .key-cap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 1;
 }
 
-.glass-panel {
-  background: var(--surface-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+/* Animations */
+@keyframes windowPop {
+  0% { opacity: 0; transform: scale(0.985); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-.gradient-text-cyan-violet {
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+@keyframes fadeInFast {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.gradient-text-gold {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #f97316 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.animate-pop {
+  animation: windowPop 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade {
+  animation: fadeInFast 0.15s ease-out forwards;
+}
+
+/* Accessibility */
+:focus-visible {
+  outline: 1.5px solid var(--border-active);
+  outline-offset: 1px;
 }

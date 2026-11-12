@@ -1,395 +1,552 @@
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import useAnalysisStore from './store/useAnalysisStore'
 import { translations } from './i18n'
 import TextInput from './components/TextInput'
 import ResultPanel from './components/ResultPanel'
 import HistoryDrawer from './components/HistoryDrawer'
 import CompareModal from './components/CompareModal'
+import CommandPalette from './components/CommandPalette'
+import { 
+  ShieldCheck, 
+  FileText, 
+  Code2, 
+  Calculator, 
+  History, 
+  Scale, 
+  Languages, 
+  HelpCircle,
+  Command,
+  Search,
+  CheckCircle2,
+  Terminal,
+  X
+} from 'lucide-react'
 
 export default function App() {
   const { language, setLanguage, mode, setMode, history, setIsHistoryOpen, setIsCompareOpen } = useAnalysisStore()
   const t = translations[language] ?? translations.es
   const [showHow, setShowHow] = useState(false)
+  const [isCommandOpen, setIsCommandOpen] = useState(false)
+
+  // Global keyboard shortcuts (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsCommandOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const modesConfig = [
-    { id: 'text', label: t.modeText, icon: '🌐', desc: t.modeTextDesc, color: '#38bdf8' },
-    { id: 'code', label: t.modeCode, icon: '💻', desc: t.modeCodeDesc, color: '#a855f7' },
-    { id: 'math', label: t.modeMath, icon: '🧮', desc: t.modeMathDesc, color: '#10b981' },
+    { 
+      id: 'text', 
+      label: t.modeText, 
+      Icon: FileText, 
+      desc: t.modeTextDesc, 
+      tag: 'Factual NLP' 
+    },
+    { 
+      id: 'code', 
+      label: t.modeCode, 
+      Icon: Code2, 
+      desc: t.modeCodeDesc, 
+      tag: 'Python AST' 
+    },
+    { 
+      id: 'math', 
+      label: t.modeMath, 
+      Icon: Calculator, 
+      desc: t.modeMathDesc, 
+      tag: 'SymPy Logic' 
+    },
   ]
 
   const activeModeInfo = modesConfig.find(m => m.id === mode) ?? modesConfig[0]
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      background: 'var(--bg-desktop)',
+      position: 'relative',
+    }}>
 
-      {/* Futuristic Navbar */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(6, 7, 10, 0.85)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        padding: '0 2rem', height: 62,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      {/* macOS Raycast-Style Floating Main Navigation */}
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        background: 'rgba(10, 10, 11, 0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid var(--border-hairline)',
+        height: '52px',
+        padding: '0 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: '1.4rem', filter: 'drop-shadow(0 0 8px rgba(6,182,212,0.6))' }}>🧠</span>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{
-              fontSize: '1.15rem', fontWeight: 800,
-              background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%)',
-              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-              letterSpacing: '-0.02em', fontFamily: 'var(--font-display)',
-            }}>
-              {t.navTitle}
-            </span>
-            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-              {t.navSubtitle}
-            </span>
+        {/* macOS Window Controls + App Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Traffic Light Dots */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', opacity: 0.85 }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56', display: 'inline-block' }} />
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ffbd2e', display: 'inline-block' }} />
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#27c93f', display: 'inline-block' }} />
           </div>
 
-          <span style={{
-            fontSize: 10, fontWeight: 700, color: '#38bdf8',
-            background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)',
-            borderRadius: 5, padding: '2px 8px', letterSpacing: '.06em', marginLeft: 6,
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            paddingLeft: 6,
           }}>
-            v2.0 PRO
-          </span>
+            <ShieldCheck size={16} color="var(--text-main)" strokeWidth={2.2} />
+            <span style={{
+              fontSize: '13.5px',
+              fontWeight: 600,
+              color: 'var(--text-main)',
+              letterSpacing: '-0.01em',
+            }}>
+              Attestly
+            </span>
+            <span style={{
+              fontSize: '10px',
+              color: 'var(--text-tertiary)',
+              fontFamily: 'var(--font-mono)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '1px 5px',
+              borderRadius: '4px',
+            }}>
+              v2.1
+            </span>
+          </div>
         </div>
 
-        {/* Center Mode Switcher Pills */}
+        {/* Center Engine Switcher */}
         <div style={{
-          display: 'flex', background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: 30, padding: 3, gap: 4,
+          display: 'flex',
+          alignItems: 'center',
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid var(--border-hairline)',
+          borderRadius: '7px',
+          padding: '2px',
+          gap: 2,
         }}>
           {modesConfig.map(m => {
             const isActive = mode === m.id
+            const IconCmp = m.Icon
             return (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 style={{
-                  background: isActive ? 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(139,92,246,0.25))' : 'transparent',
-                  border: isActive ? `1px solid ${m.color}66` : '1px solid transparent',
-                  borderRadius: 24, padding: '5px 14px',
-                  color: isActive ? '#f8fafc' : '#94a3b8',
-                  fontSize: 12, fontWeight: isActive ? 700 : 500,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  cursor: 'pointer', transition: 'all .2s ease',
-                  boxShadow: isActive ? `0 0 14px ${m.color}33` : 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 11px',
+                  borderRadius: '5px',
+                  fontSize: '12px',
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                  background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  border: isActive ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid transparent',
+                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.4)' : 'none',
                 }}
               >
-                <span>{m.icon}</span>
+                <IconCmp size={13} color={isActive ? '#ffffff' : 'currentColor'} />
                 <span>{m.label}</span>
               </button>
             )
           })}
         </div>
 
-        {/* Right action group */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* History Button */}
+        {/* Right Tools & Raycast Command Search Trigger */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Command Palette Trigger */}
+          <button
+            onClick={() => setIsCommandOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '4px 10px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-hairline)',
+              borderRadius: '6px',
+              color: 'var(--text-secondary)',
+              fontSize: '11.5px',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#ffffff'
+              e.currentTarget.style.borderColor = 'var(--border-muted)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.borderColor = 'var(--border-hairline)'
+            }}
+          >
+            <Search size={12} />
+            <span>Comandos</span>
+            <div style={{ display: 'flex', gap: 2 }}>
+              <kbd>⌘</kbd>
+              <kbd>K</kbd>
+            </div>
+          </button>
+
+          {/* Audit History */}
           <button
             onClick={() => setIsHistoryOpen(true)}
             style={{
-              background: '#0d111a',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6,
-              color: '#cbd5e1',
-              fontSize: 11,
-              fontWeight: 600,
-              padding: '5px 11px',
-              cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
-              transition: 'all .15s ease',
+              gap: 5,
+              padding: '4px 9px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              background: 'transparent',
+              border: '1px solid transparent',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#38bdf8'
-              e.currentTarget.style.color = '#38bdf8'
+              e.currentTarget.style.color = '#ffffff'
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-              e.currentTarget.style.color = '#cbd5e1'
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.background = 'transparent'
             }}
           >
-            <span>📜</span>
+            <History size={13} />
             <span>{t.navHistory}</span>
             {history.length > 0 && (
-              <span
-                style={{
-                  background: 'rgba(56,189,248,0.18)',
-                  color: '#38bdf8',
-                  borderRadius: 10,
-                  padding: '1px 6px',
-                  fontSize: 10,
-                  fontFamily: 'var(--font-mono)',
-                }}
-              >
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#ffffff',
+                background: 'rgba(255, 255, 255, 0.12)',
+                borderRadius: '8px',
+                padding: '0 5px',
+                fontFamily: 'var(--font-mono)',
+              }}>
                 {history.length}
               </span>
             )}
           </button>
 
-          {/* Comparator Button */}
+          {/* Model Comparator */}
           <button
             onClick={() => setIsCompareOpen(true)}
             style={{
-              background: '#0d111a',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6,
-              color: '#cbd5e1',
-              fontSize: 11,
-              fontWeight: 600,
-              padding: '5px 11px',
-              cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
-              transition: 'all .15s ease',
+              gap: 5,
+              padding: '4px 9px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              background: 'transparent',
+              border: '1px solid transparent',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#c084fc'
-              e.currentTarget.style.color = '#c084fc'
+              e.currentTarget.style.color = '#ffffff'
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-              e.currentTarget.style.color = '#cbd5e1'
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.background = 'transparent'
             }}
           >
-            <span>⚖️</span>
+            <Scale size={13} />
             <span>{t.navCompare}</span>
           </button>
 
-          {/* Language toggle */}
+          {/* Language */}
           <button
             onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
             style={{
-              background: '#0d111a', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6, color: '#cbd5e1', fontSize: 11, fontWeight: 600,
-              padding: '5px 9px', cursor: 'pointer', transition: 'all .15s ease',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 500,
+              color: 'var(--text-tertiary)',
+              background: 'transparent',
             }}
+            onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}
           >
-            {language === 'es' ? '🇲🇽 ES' : '🇺🇸 EN'}
+            <Languages size={12} />
+            <span>{language === 'es' ? 'ES' : 'EN'}</span>
           </button>
 
+          {/* Architecture / How it works */}
           <button
             onClick={() => setShowHow(true)}
             style={{
-              background: 'none', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 6, color: '#94a3b8', fontSize: 12,
-              padding: '5px 12px', cursor: 'pointer', transition: 'all .15s ease',
+              color: 'var(--text-tertiary)',
+              padding: '5px',
+              display: 'flex',
+              alignItems: 'center',
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#38bdf8'
-              e.currentTarget.style.color = '#f8fafc'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-              e.currentTarget.style.color = '#94a3b8'
-            }}
+            onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}
+            title={t.navHowItWorks}
           >
-            {t.navHowItWorks}
+            <HelpCircle size={14} />
           </button>
-
-          <p style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{
-              display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-              background: '#10b981', boxShadow: '0 0 8px #10b981',
-            }} />
-            {t.navStatus}
-          </p>
         </div>
-      </nav>
+      </header>
 
-      {/* Main Content Container */}
-      <main style={{ flex: 1, maxWidth: 1180, width: '100%', margin: '0 auto', padding: '2.5rem 1.5rem' }}>
+      {/* Floating Workstation Window Container */}
+      <main style={{
+        flex: 1,
+        maxWidth: 1380,
+        width: '100%',
+        margin: '0 auto',
+        padding: '24px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+      }}>
 
-        {/* Hero Header */}
-        <header style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)',
-            borderRadius: 30, padding: '4px 14px', marginBottom: 14,
-          }}>
-            <span style={{ fontSize: 12 }}>⚡</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', letterSpacing: '.06em' }}>
-              {t.heroBadge}
+        {/* Workstation Top Breadcrumb / Status Line */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '0 4px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+              Estación de Trabajo
+            </span>
+            <span style={{ color: 'var(--text-muted)' }}>/</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              {activeModeInfo.desc}
             </span>
           </div>
 
-          <h1 style={{
-            fontSize: '2.4rem', fontWeight: 800, color: '#f8fafc',
-            letterSpacing: '-0.03em', marginBottom: 10, fontFamily: 'var(--font-display)',
-          }}>
-            {t.heroTitle}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--status-success)' }} />
+              Motor Activo
+            </span>
+            <span>·</span>
+            <span>{activeModeInfo.tag}</span>
+          </div>
+        </div>
 
-          <p style={{ color: '#94a3b8', fontSize: 15, maxWidth: 640, margin: '0 auto', lineHeight: 1.6 }}>
-            {activeModeInfo.desc}
-          </p>
-
-          <div style={{
-            width: 80, height: 2,
-            background: `linear-gradient(90deg, transparent, ${activeModeInfo.color}, transparent)`,
-            margin: '20px auto 0',
-          }} />
-        </header>
-
-        {/* Two-Column Workspace Layout */}
+        {/* Two Floating macOS Panels */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(420px, 1fr) minmax(460px, 1.15fr)',
+          gap: '20px',
           alignItems: 'start',
         }}>
 
-          {/* Left Column: Input Form */}
-          <section className="glass-panel" style={{
-            padding: '1.75rem', borderTop: `2px solid ${activeModeInfo.color}`,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={sectionTitleStyle}>
-                {t.sectionInput}
-              </h2>
+          {/* Left Panel: Input Surface */}
+          <section className="raycast-window" style={{ padding: '20px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+              paddingBottom: 10,
+              borderBottom: '1px solid var(--border-hairline)',
+            }}>
               <span style={{
-                fontSize: 11, fontWeight: 600, color: activeModeInfo.color,
-                background: `${activeModeInfo.color}15`, border: `1px solid ${activeModeInfo.color}33`,
-                borderRadius: 20, padding: '2px 9px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--text-tertiary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
               }}>
-                {activeModeInfo.label}
+                {t.sectionInput}
+              </span>
+
+              <span style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)',
+              }}>
+                Buffer de Análisis
               </span>
             </div>
+
             <TextInput />
           </section>
 
-          {/* Right Column: Live Analysis */}
-          <section className="glass-panel" style={{
-            padding: '1.75rem', minHeight: 460,
-            borderTop: '2px solid rgba(255,255,255,0.15)',
-          }}>
-            <h2 style={sectionTitleStyle}>
-              {t.sectionAnalysis}
-            </h2>
+          {/* Right Panel: Diagnostic & Verification Surface */}
+          <section className="raycast-window" style={{ padding: '20px', minHeight: 520 }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+              paddingBottom: 10,
+              borderBottom: '1px solid var(--border-hairline)',
+            }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--text-tertiary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}>
+                {t.sectionAnalysis}
+              </span>
+
+              <span style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)',
+              }}>
+                Certificación y Auditoría
+              </span>
+            </div>
+
             <ResultPanel />
           </section>
 
         </div>
 
-        {/* Footer */}
-        <footer style={{
-          textAlign: 'center', marginTop: '3.5rem', color: '#475569',
-          fontSize: 12, display: 'flex', flexDirection: 'column', gap: 6,
+        {/* Desktop Bottom Statusbar (Raycast Footer) */}
+        <div style={{
+          marginTop: 'auto',
+          padding: '8px 14px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid var(--border-hairline)',
+          borderRadius: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '11px',
+          color: 'var(--text-tertiary)',
         }}>
-          <p>
-            🧠 <strong>ATTESTLY</strong> · Arquitectura de Auditoría Tripartita (Factual · AST Code · SymPy Math)
-          </p>
-          <p style={{ fontSize: 11 }}>
-            Desarrollado para sistemas distribuidos y detección de alucinaciones en modelos de lenguaje de caja negra.
-          </p>
-        </footer>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span>Attestly Desktop Experience</span>
+            <span>·</span>
+            <span>Atajo global: <kbd>⌘</kbd> <kbd>K</kbd></span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span>Ejecutar: <kbd>↵</kbd></span>
+            <span>Historial: <kbd>H</kbd></span>
+          </div>
+        </div>
+
       </main>
 
-      {/* "How It Works" Architecture Modal */}
+      {/* Raycast Architecture Dialog */}
       {showHow && (
         <div
           onClick={() => setShowHow(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            background: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '1.5rem', backdropFilter: 'blur(8px)',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 350,
+            background: 'rgba(0, 0, 0, 0.72)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
           }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="glass-panel"
+            className="raycast-window animate-pop"
             style={{
-              padding: '2.2rem', maxWidth: 680, width: '100%',
-              maxHeight: '88vh', overflowY: 'auto',
-              borderTop: '2px solid #38bdf8',
+              maxWidth: 640,
+              width: '100%',
+              maxHeight: '86vh',
+              overflowY: 'auto',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+              background: '#121214',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: '1.4rem' }}>🧠</span>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-display)' }}>
+                <ShieldCheck size={18} color="var(--text-main)" />
+                <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff' }}>
                   {t.howTitle}
-                </h2>
+                </h3>
               </div>
-              <button
-                onClick={() => setShowHow(false)}
-                style={{ color: '#64748b', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}
-              >
-                ✕
+              <button onClick={() => setShowHow(false)} style={{ color: 'var(--text-tertiary)' }}>
+                <X size={17} />
               </button>
             </div>
 
-            <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: '1.5rem', lineHeight: 1.7 }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               {t.howIntro}
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
                 {
-                  icon: '🌐', color: '#38bdf8', title: 'Dimensión 1: Factual / Texto',
-                  desc: 'Analiza señales léxicas de cobertura (hedging) y vaguedad, contrasta afirmaciones contra Wikipedia y calcula solapamiento de entidades para mitigar desinformación en lenguaje natural.',
+                  title: '1. Dimensión Factual (NLP & Grounding)',
+                  desc: 'Aísla afirmaciones factuales y contrasta solapamiento léxico contra Wikipedia y fuentes web en tiempo real sin requerir acceso a los pesos internos del LLM.',
                 },
                 {
-                  icon: '💻', color: '#a855f7', title: 'Dimensión 2: Código & APIs',
-                  desc: 'Inspecciona el código mediante análisis de AST en Python. Verifica si los paquetes importados existen en la librería estándar o en PyPI (detectando librerías alucinadas), y audita métodos inexistentes.',
+                  title: '2. Dimensión de Código (AST & PyPI)',
+                  desc: 'Inspecciona la estructura de código fuente, validando sintaxis formal y consultando el índice oficial de PyPI para detectar dependencias inventadas o métodos inexistentes.',
                 },
                 {
-                  icon: '🧮', color: '#10b981', title: 'Dimensión 3: Matemáticas con SymPy',
-                  desc: 'Extrae igualdades y pasos aritméticos intermedios. SymPy calcula simbólicamente la diferencia formal entre el lado izquierdo y derecho, detectando errores de cálculo en segundos.',
+                  title: '3. Dimensión Matemática (SymPy Symbolic)',
+                  desc: 'Evalúa formalmente si LHS - RHS = 0 con álgebra simbólica exacta en SymPy, detectando alucinaciones aritméticas y pasos de deducción inválidos.',
                 },
-              ].map((pill, i) => (
-                <div key={i} style={{
-                  background: '#090d15', border: '1px solid rgba(255,255,255,0.06)',
-                  borderLeft: `3px solid ${pill.color}`,
-                  borderRadius: 8, padding: '14px 16px',
-                  display: 'flex', gap: 14, alignItems: 'flex-start',
+              ].map((item, idx) => (
+                <div key={idx} style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-hairline)',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
                 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-                    background: `${pill.color}15`, border: `1px solid ${pill.color}33`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                  }}>
-                    {pill.icon}
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', marginBottom: 4 }}>
-                      {pill.title}
-                    </p>
-                    <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>{pill.desc}</p>
-                  </div>
+                  <h4 style={{ fontSize: '12.5px', fontWeight: 600, color: '#ffffff', marginBottom: 4 }}>
+                    {item.title}
+                  </h4>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {item.desc}
+                  </p>
                 </div>
               ))}
             </div>
 
-            <button
-              onClick={() => setShowHow(false)}
-              style={{
-                marginTop: '1.75rem', width: '100%',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8, padding: '10px 0', color: '#f8fafc', fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', transition: 'background .15s ease',
-              }}
-            >
-              {t.howClose}
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+              <button
+                onClick={() => setShowHow(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                }}
+              >
+                {t.howClose}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* History Drawer & Comparison Modal */}
+      {/* Floating Drawers & Modals */}
+      <CommandPalette isOpen={isCommandOpen} onClose={() => setIsCommandOpen(false)} />
       <HistoryDrawer />
       <CompareModal />
 
     </div>
   )
-}
-
-const sectionTitleStyle = {
-  fontSize: 11, fontWeight: 700, color: '#64748b',
-  textTransform: 'uppercase', letterSpacing: '.1em',
 }

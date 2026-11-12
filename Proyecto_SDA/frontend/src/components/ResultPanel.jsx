@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import useAnalysisStore from '../store/useAnalysisStore'
 import { translations } from '../i18n'
 import ScoreGauge from './ScoreGauge'
@@ -6,6 +6,13 @@ import ClaimCard from './ClaimCard'
 import HighlightedText from './HighlightedText'
 import CodeResultView from './CodeResultView'
 import MathResultView from './MathResultView'
+import { 
+  Clock, 
+  AlertCircle, 
+  CheckCircle2, 
+  Terminal,
+  Activity
+} from 'lucide-react'
 
 export default function ResultPanel() {
   const { result, error, loading, language, mode } = useAnalysisStore()
@@ -13,81 +20,133 @@ export default function ResultPanel() {
 
   if (loading) return <LayerProgress mode={mode} />
 
-  if (error) return (
-    <div style={{
-      border: '1px solid rgba(244,63,94,0.35)', background: 'rgba(244,63,94,0.08)',
-      borderRadius: 10, padding: '16px', display: 'flex', flexDirection: 'column', gap: 6,
-    }}>
-      <strong style={{ color: '#f43f5e', fontSize: 13, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-        ⚠️ {t.errorLabel}
-      </strong>
-      <p style={{ color: '#cbd5e1', fontSize: 13 }}>{error}</p>
-    </div>
-  )
-
-  if (!result) return (
-    <div style={emptyContainerStyle}>
+  if (error) {
+    return (
       <div style={{
-        width: 64, height: 64, borderRadius: 16,
-        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+        border: '1px solid var(--border-hairline)',
+        background: 'var(--status-error-subtle)',
+        borderRadius: '10px',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
       }}>
-        {mode === 'code' ? '💻' : mode === 'math' ? '🧮' : '🔍'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertCircle size={16} color="var(--status-error)" />
+          <strong style={{ color: 'var(--status-error)', fontSize: '12.5px', textTransform: 'uppercase' }}>
+            {t.errorLabel}
+          </strong>
+        </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '12.5px', lineHeight: 1.5 }}>
+          {error}
+        </p>
       </div>
-      <p style={{ color: '#64748b', fontSize: 13, maxWidth: 300, lineHeight: 1.5 }}>
-        {t.emptyHint}
-      </p>
-    </div>
-  )
+    )
+  }
+
+  if (!result) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '70px 20px',
+        textAlign: 'center',
+        border: '1px dashed var(--border-hairline)',
+        borderRadius: '12px',
+        background: 'rgba(255, 255, 255, 0.01)',
+      }}>
+        <div style={{
+          width: 44,
+          height: 44,
+          borderRadius: '10px',
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid var(--border-hairline)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-tertiary)',
+          marginBottom: 12,
+        }}>
+          <Terminal size={20} />
+        </div>
+        <p style={{ color: 'var(--text-main)', fontSize: '13.5px', fontWeight: 500, marginBottom: 4 }}>
+          Panel de Auditoría en Espera
+        </p>
+        <p style={{ color: 'var(--text-tertiary)', fontSize: '12px', maxWidth: 280, lineHeight: 1.5 }}>
+          Introduce una muestra y presiona <kbd>↵ Ejecutar</kbd> o abre los comandos con <kbd>⌘K</kbd>.
+        </p>
+      </div>
+    )
+  }
 
   const halluCount = result.claims?.filter(c => c.l4?.is_hallucination || c.risk_level === 'high').length ?? 0
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Primary Summary Metric Card */}
+      {/* Overview Top Metric Panel */}
       <div style={{
-        background: '#090d15', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+        background: 'rgba(255, 255, 255, 0.02)',
+        border: '1px solid var(--border-hairline)',
+        borderRadius: '12px',
+        padding: '16px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 16,
       }}>
-        <ScoreGauge score={result.overall_score} />
+        <ScoreGauge score={result.overall_score} size={95} />
 
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <p style={subHeaderLabel}>{t.labelMethod}</p>
-          <p style={{ fontSize: 12, color: '#38bdf8', fontFamily: 'var(--font-mono)', marginBottom: 12 }}>
-            {result.method_used}
-          </p>
+        <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+              {t.labelMethod}
+            </span>
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+              {result.method_used}
+            </p>
+          </div>
 
-          <p style={subHeaderLabel}>Dominio Auditado</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14 }}>
-              {result.mode === 'code' ? '💻' : result.mode === 'math' ? '🧮' : '🌐'}
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+              Dominio
             </span>
-            <span style={{
-              fontSize: 14, fontWeight: 700, color: '#f8fafc',
-              textTransform: 'capitalize',
-            }}>
-              {result.mode === 'code' ? 'Código Fuente' : result.mode === 'math' ? 'Matemáticas' : 'Texto Fáctico'}
-            </span>
+            <p style={{ fontSize: '12.5px', fontWeight: 500, color: 'var(--text-secondary)', textTransform: 'capitalize', marginTop: 2 }}>
+              {result.mode === 'code' ? 'Código Fuente (Python)' : result.mode === 'math' ? 'Álgebra Simbólica (SymPy)' : 'Hechos y Afirmaciones (NLP)'}
+            </p>
           </div>
         </div>
 
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <span style={{
-            fontSize: 11, fontWeight: 600, color: '#38bdf8',
-            background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)',
-            borderRadius: 6, padding: '3px 8px', fontFamily: 'var(--font-mono)',
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            fontFamily: 'var(--font-mono)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '5px',
+            padding: '2px 7px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
           }}>
-            ⚡ {result.processing_time_ms} ms
+            <Clock size={11} />
+            {result.processing_time_ms} ms
           </span>
-          <p style={{ fontSize: 10, color: '#475569', fontFamily: 'var(--font-mono)', marginTop: 8 }}>
+
+          <span style={{
+            fontSize: '10.5px',
+            color: 'var(--text-tertiary)',
+            fontFamily: 'var(--font-mono)',
+          }}>
             ID: {result.id.slice(0, 8)}
-          </p>
+          </span>
         </div>
       </div>
 
-      {/* Render specialized view according to mode */}
+      {/* Mode-Specific Views */}
       {result.mode === 'code' && (
         <CodeResultView codeResult={result.code_result} />
       )}
@@ -97,16 +156,27 @@ export default function ResultPanel() {
       )}
 
       {result.mode === 'text' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Hallucination status alert bar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Factual Summary Bar */}
           <div style={{
-            background: halluCount > 0 ? 'rgba(244,63,94,0.08)' : 'rgba(16,185,129,0.08)',
-            border: `1px solid ${halluCount > 0 ? 'rgba(244,63,94,0.3)' : 'rgba(16,185,129,0.25)'}`,
-            borderRadius: 8, padding: '10px 16px',
-            display: 'flex', alignItems: 'center', gap: 10,
+            background: halluCount > 0 ? 'var(--status-error-subtle)' : 'var(--status-success-subtle)',
+            border: `1px solid ${halluCount > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
+            borderRadius: '8px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
           }}>
-            <span style={{ fontSize: 18 }}>{halluCount > 0 ? '⚠️' : '✅'}</span>
-            <p style={{ fontSize: 13, color: halluCount > 0 ? '#f43f5e' : '#10b981', fontWeight: 600 }}>
+            {halluCount > 0 ? (
+              <AlertCircle size={16} color="var(--status-error)" />
+            ) : (
+              <CheckCircle2 size={16} color="var(--status-success)" />
+            )}
+            <p style={{
+              fontSize: '12.5px',
+              fontWeight: 500,
+              color: halluCount > 0 ? 'var(--status-error)' : 'var(--status-success)',
+            }}>
               {halluCount > 0
                 ? t.halluFound(halluCount, result.claims.length)
                 : t.halluNone(result.claims.length)
@@ -114,14 +184,18 @@ export default function ResultPanel() {
             </p>
           </div>
 
-          {/* Highlighted text visualizer */}
           <HighlightedText text={result.original_text} claims={result.claims} />
 
-          {/* Claims breakdown list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.1em' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{
+              fontSize: '10.5px',
+              fontWeight: 600,
+              color: 'var(--text-tertiary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}>
               {t.claimsBreakdown} ({result.claims.length})
-            </p>
+            </span>
             {result.claims.map((claim, i) => (
               <ClaimCard key={i} claim={claim} index={i} />
             ))}
@@ -138,22 +212,22 @@ function LayerProgress({ mode }) {
 
   const stepsMap = {
     code: [
-      { name: 'Análisis Sintáctico AST', detail: 'Parseando árbol de sintaxis abstracta…' },
-      { name: 'Auditoría PyPI & Stdlib', detail: 'Buscando módulos en registro oficial…' },
-      { name: 'Firmas de Funciones & APIs', detail: 'Verificando métodos y llamadas…' },
-      { name: 'Generación de Parche IA', detail: 'Sintetizando código corregido…' },
+      { name: 'Análisis Sintáctico AST', detail: 'Parseando árbol de código Python…' },
+      { name: 'Registro de Paquetes PyPI', detail: 'Auditando existencia de dependencias…' },
+      { name: 'Firmas de APIs', detail: 'Comprobando métodos y llamadas estándar…' },
+      { name: 'Corrección con IA', detail: 'Generando parche asistido…' },
     ],
     math: [
-      { name: 'Extracción de Ecuaciones', detail: 'Identificando igualdades y cálculos…' },
-      { name: 'Motor Simbólico SymPy', detail: 'Simplificando y evaluando expresiones…' },
-      { name: 'Comprobación de Discrepancias', detail: 'Calculando diferencia numérica…' },
-      { name: 'Resolución Paso a Paso', detail: 'Generando prueba formal…' },
+      { name: 'Extracción de Ecuaciones', detail: 'Segmentando igualdades matemáticas…' },
+      { name: 'Evaluación SymPy', detail: 'Comprobando identidades simbólicas…' },
+      { name: 'Delta Numérico', detail: 'Computando discrepancia formal…' },
+      { name: 'Demostración', detail: 'Sintetizando pasos corregidos…' },
     ],
     text: [
-      { name: 'Análisis Lingüístico', detail: 'Detectando hedging y vaguedad…' },
-      { name: 'Verificación Wikipedia', detail: 'Consultando enciclopedia y web…' },
-      { name: 'Puntuación Adaptativa', detail: 'Calculando confianza final…' },
-      { name: 'Corrección con IA', detail: 'Contrastando afirmaciones…' },
+      { name: 'Señales Lingüísticas', detail: 'Midiendo cobertura léxica y vaguedad…' },
+      { name: 'Grounding Wikipedia', detail: 'Contrastando afirmaciones atómicas…' },
+      { name: 'Scoring Adaptativo', detail: 'Ponderando índice de fiabilidad…' },
+      { name: 'Auditoría IA', detail: 'Contrastando inconsistencias…' },
     ],
   }
 
@@ -162,55 +236,82 @@ function LayerProgress({ mode }) {
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveStep(s => (s < steps.length - 1 ? s + 1 : s))
-    }, 900)
+    }, 850)
     return () => clearInterval(timer)
   }, [steps.length])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '24px 0' }}>
-      <p style={{
-        fontSize: 11, fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase',
-        letterSpacing: '.1em', textAlign: 'center',
-      }}>
-        ⚡ DIAGNÓSTICO EN TIEMPO REAL
-      </p>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16,
+      padding: '28px 16px',
+      background: 'rgba(255, 255, 255, 0.01)',
+      border: '1px solid var(--border-hairline)',
+      borderRadius: '10px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <span style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: '#ffffff',
+          boxShadow: '0 0 6px rgba(255, 255, 255, 0.6)',
+        }} />
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: 'var(--text-secondary)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+        }}>
+          Auditoría en Ejecución
+        </span>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
         {steps.map((st, i) => {
           const done = i < activeStep
           const current = i === activeStep
-          const color = done ? '#10b981' : current ? '#06b6d4' : '#1e293b'
-          const textCol = done ? '#10b981' : current ? '#f8fafc' : '#475569'
+          const stepColor = done ? 'var(--status-success)' : current ? '#ffffff' : 'var(--text-muted)'
+          const textCol = done ? 'var(--text-secondary)' : current ? 'var(--text-main)' : 'var(--text-muted)'
 
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'stretch' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 26 }}>
                 <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: done ? 'rgba(16,185,129,0.15)' : current ? 'rgba(6,182,212,0.15)' : '#090d15',
-                  border: `2px solid ${color}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700, color, flexShrink: 0, transition: 'all .4s ease',
-                  boxShadow: current ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: done ? 'var(--status-success-subtle)' : current ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  border: `1.5px solid ${stepColor}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '9.5px',
+                  fontWeight: 600,
+                  color: stepColor,
+                  flexShrink: 0,
+                  transition: 'all 0.25s ease',
                 }}>
                   {done ? '✓' : i + 1}
                 </div>
                 {i < steps.length - 1 && (
                   <div style={{
-                    width: 2, flex: 1, minHeight: 22,
-                    background: done ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.06)',
-                    transition: 'background .4s ease',
+                    width: 1,
+                    flex: 1,
+                    minHeight: 18,
+                    background: done ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-hairline)',
+                    transition: 'background 0.25s ease',
                   }} />
                 )}
               </div>
 
-              <div style={{ paddingLeft: 14, paddingBottom: i < steps.length - 1 ? 16 : 0, paddingTop: 3 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: textCol, transition: 'color .4s ease' }}>
+              <div style={{ paddingLeft: 10, paddingBottom: i < steps.length - 1 ? 12 : 0, paddingTop: 1 }}>
+                <p style={{ fontSize: '12px', fontWeight: current ? 600 : 400, color: textCol }}>
                   {st.name}
                 </p>
-                {current && <p style={{ fontSize: 11, color: '#38bdf8', marginTop: 2 }}>{st.detail}</p>}
-                {done && <p style={{ fontSize: 11, color: 'rgba(16,185,129,0.7)', marginTop: 2 }}>Completado</p>}
-                {!done && !current && <p style={{ fontSize: 11, color: '#334155', marginTop: 2 }}>En espera…</p>}
+                {current && <p style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: 2 }}>{st.detail}</p>}
               </div>
             </div>
           )
@@ -218,14 +319,4 @@ function LayerProgress({ mode }) {
       </div>
     </div>
   )
-}
-
-const subHeaderLabel = {
-  fontSize: 10, fontWeight: 700, color: '#64748b',
-  textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4,
-}
-
-const emptyContainerStyle = {
-  display: 'flex', flexDirection: 'column', alignItems: 'center',
-  justifyContent: 'center', gap: 14, padding: '56px 0', textAlign: 'center',
 }

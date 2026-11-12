@@ -1,5 +1,18 @@
+import React from 'react'
 import useAnalysisStore from '../store/useAnalysisStore'
 import { translations } from '../i18n'
+import { 
+  History, 
+  Trash2, 
+  ArrowUpRight, 
+  Scale, 
+  X, 
+  FileText, 
+  Code, 
+  Calculator, 
+  Clock,
+  Inbox
+} from 'lucide-react'
 
 export default function HistoryDrawer() {
   const {
@@ -12,7 +25,6 @@ export default function HistoryDrawer() {
     language,
     setIsCompareOpen,
     setCompareItemA,
-    setCompareItemB,
   } = useAnalysisStore()
 
   const t = translations[language] ?? translations.es
@@ -26,15 +38,15 @@ export default function HistoryDrawer() {
   }
 
   const getRiskColor = (risk) => {
-    if (risk === 'low') return '#10b981'
-    if (risk === 'medium') return '#f59e0b'
-    return '#f43f5e'
+    if (risk === 'low') return 'var(--status-success-text)'
+    if (risk === 'medium') return 'var(--status-warn-text)'
+    return 'var(--status-error-text)'
   }
 
   const getModeIcon = (mode) => {
-    if (mode === 'code') return '💻'
-    if (mode === 'math') return '🧮'
-    return '🌐'
+    if (mode === 'code') return <Code size={13} />
+    if (mode === 'math') return <Calculator size={13} />
+    return <FileText size={13} />
   }
 
   return (
@@ -44,8 +56,8 @@ export default function HistoryDrawer() {
         position: 'fixed',
         inset: 0,
         zIndex: 250,
-        background: 'rgba(0,0,0,0.75)',
-        backdropFilter: 'blur(8px)',
+        background: 'rgba(0, 0, 0, 0.65)',
+        backdropFilter: 'blur(4px)',
         display: 'flex',
         justifyContent: 'flex-end',
       }}
@@ -54,41 +66,37 @@ export default function HistoryDrawer() {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
-          maxWidth: 480,
+          maxWidth: 460,
           height: '100vh',
-          background: '#090d15',
-          borderLeft: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '-10px 0 40px rgba(0,0,0,0.6)',
+          background: 'var(--bg-surface)',
+          borderLeft: '1px solid var(--border-default)',
+          boxShadow: 'var(--shadow-lg)',
           display: 'flex',
           flexDirection: 'column',
-          animation: 'slideInRight 0.25s ease-out',
+          animation: 'slideInRight 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {/* Header */}
-        <div
-          style={{
-            padding: '1.5rem',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
+        {/* Drawer Header */}
+        <div style={{
+          padding: '18px 20px',
+          borderBottom: '1px solid var(--border-default)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'var(--bg-subtle)',
+        }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '1.2rem' }}>📜</span>
-              <h2
-                style={{
-                  fontSize: '1.15rem',
-                  fontWeight: 800,
-                  color: '#f8fafc',
-                  fontFamily: 'var(--font-display)',
-                }}
-              >
+              <History size={16} color="var(--brand-text)" />
+              <h2 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+              }}>
                 {t.historyTitle}
               </h2>
             </div>
-            <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: 2 }}>
               {t.historySubtitle}
             </p>
           </div>
@@ -98,53 +106,61 @@ export default function HistoryDrawer() {
               <button
                 onClick={clearHistory}
                 style={{
-                  background: 'rgba(244,63,94,0.1)',
-                  border: '1px solid rgba(244,63,94,0.25)',
-                  borderRadius: 6,
-                  color: '#f43f5e',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: '5px 10px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
+                  background: 'var(--status-error-bg)',
+                  border: '1px solid var(--status-error-border)',
+                  borderRadius: 'var(--radius-xs)',
+                  color: 'var(--status-error-text)',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  padding: '4px 8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
                 }}
               >
-                {t.historyClearAll}
+                <Trash2 size={11} />
+                <span>{t.historyClearAll}</span>
               </button>
             )}
             <button
               onClick={() => setIsHistoryOpen(false)}
               style={{
-                background: 'none',
-                border: 'none',
-                color: '#64748b',
-                fontSize: 20,
-                cursor: 'pointer',
+                color: 'var(--text-tertiary)',
                 padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              ✕
+              <X size={17} />
             </button>
           </div>
         </div>
 
-        {/* Content list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* History List Items */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}>
           {history.length === 0 ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '60%',
-                color: '#64748b',
-                textAlign: 'center',
-                gap: 10,
-              }}
-            >
-              <span style={{ fontSize: 36, opacity: 0.4 }}>📭</span>
-              <p style={{ fontSize: 13, maxWidth: 260 }}>{t.historyEmpty}</p>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '60%',
+              color: 'var(--text-tertiary)',
+              textAlign: 'center',
+              gap: 8,
+            }}>
+              <Inbox size={32} strokeWidth={1.5} color="var(--text-muted)" />
+              <p style={{ fontSize: '13px', maxWidth: 260, lineHeight: 1.5 }}>
+                {t.historyEmpty}
+              </p>
             </div>
           ) : (
             history.map((item) => {
@@ -162,130 +178,123 @@ export default function HistoryDrawer() {
                 <div
                   key={item.id}
                   style={{
-                    background: '#0d121c',
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--border-default)',
                     borderLeft: `3px solid ${riskColor}`,
-                    borderRadius: 8,
+                    borderRadius: 'var(--radius-sm)',
                     padding: '12px 14px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 8,
-                    transition: 'border-color 0.2s ease, transform 0.15s ease',
+                    transition: 'border-color 0.15s ease, background 0.15s ease',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13 }}>{getModeIcon(item.mode)}</span>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '.06em',
-                          color: '#38bdf8',
-                          background: 'rgba(56,189,248,0.1)',
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          fontFamily: 'var(--font-mono)',
-                        }}
-                      >
+                      <span style={{ color: 'var(--brand-text)' }}>
+                        {getModeIcon(item.mode)}
+                      </span>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        color: 'var(--text-primary)',
+                      }}>
                         {item.mode}
                       </span>
                       {item.model && (
-                        <span style={{ fontSize: 10, color: '#64748b', fontFamily: 'var(--font-mono)' }}>
-                          {item.model}
+                        <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                          · {item.model}
                         </span>
                       )}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 800,
-                          color: riskColor,
-                          background: `${riskColor}15`,
-                          border: `1px solid ${riskColor}40`,
-                          borderRadius: 12,
-                          padding: '2px 8px',
-                          fontFamily: 'var(--font-mono)',
-                        }}
-                      >
+                      <span style={{
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        color: riskColor,
+                        fontFamily: 'var(--font-mono)',
+                      }}>
                         {Math.round(item.overall_score * 100)}%
                       </span>
-                      <span style={{ fontSize: 10, color: '#475569' }}>{dateStr}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                        {dateStr}
+                      </span>
                     </div>
                   </div>
 
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: '#cbd5e1',
-                      lineHeight: 1.45,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      fontFamily: item.mode === 'code' ? 'var(--font-mono)' : 'inherit',
-                    }}
-                  >
+                  <p style={{
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.45,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    fontFamily: item.mode === 'code' ? 'var(--font-mono)' : 'inherit',
+                  }}>
                     {item.original_text}
                   </p>
 
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                      alignItems: 'center',
-                      gap: 6,
-                      borderTop: '1px solid rgba(255,255,255,0.04)',
-                      paddingTop: 8,
-                      marginTop: 2,
-                    }}
-                  >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    gap: 6,
+                    borderTop: '1px solid var(--border-subtle)',
+                    paddingTop: 8,
+                  }}>
                     <button
                       onClick={() => handleSendToCompare(item)}
                       style={{
-                        background: 'rgba(139,92,246,0.12)',
-                        border: '1px solid rgba(139,92,246,0.25)',
-                        borderRadius: 5,
-                        color: '#c084fc',
-                        fontSize: 10,
-                        fontWeight: 600,
-                        padding: '4px 8px',
-                        cursor: 'pointer',
+                        background: 'var(--bg-surface-elevated)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 'var(--radius-xs)',
+                        color: 'var(--text-secondary)',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        padding: '3px 8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
                       }}
                     >
-                      ⚖️ Comparar
+                      <Scale size={11} />
+                      <span>Comparar</span>
                     </button>
+
                     <button
                       onClick={() => loadFromHistory(item)}
                       style={{
-                        background: 'rgba(56,189,248,0.1)',
-                        border: '1px solid rgba(56,189,248,0.25)',
-                        borderRadius: 5,
-                        color: '#38bdf8',
-                        fontSize: 10,
-                        fontWeight: 600,
-                        padding: '4px 8px',
-                        cursor: 'pointer',
+                        background: 'var(--brand-subtle)',
+                        border: '1px solid var(--brand-border)',
+                        borderRadius: 'var(--radius-xs)',
+                        color: 'var(--brand-text)',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        padding: '3px 8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
                       }}
                     >
-                      {t.historyLoad}
+                      <ArrowUpRight size={11} />
+                      <span>{t.historyLoad}</span>
                     </button>
+
                     <button
                       onClick={() => deleteHistoryItem(item.id)}
                       style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#64748b',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                        padding: '2px 4px',
+                        color: 'var(--text-muted)',
+                        padding: '3px 6px',
+                        display: 'flex',
+                        alignItems: 'center',
                       }}
                       title={t.historyDelete}
                     >
-                      🗑️
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
@@ -297,4 +306,3 @@ export default function HistoryDrawer() {
     </div>
   )
 }
-
