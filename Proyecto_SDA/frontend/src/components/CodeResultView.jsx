@@ -10,7 +10,9 @@ import {
   Code2, 
   AlertTriangle,
   Lightbulb,
-  Sparkles
+  Sparkles,
+  ShieldAlert,
+  Database
 } from 'lucide-react'
 
 export default function CodeResultView({ codeResult }) {
@@ -21,7 +23,8 @@ export default function CodeResultView({ codeResult }) {
   if (!codeResult) return null
 
   const isJS = codeResult.language === 'javascript'
-  const langLabel = isJS ? 'JavaScript / TypeScript' : 'Python'
+  const isSQL = codeResult.language === 'sql'
+  const langLabel = isSQL ? 'SQL' : (isJS ? 'JavaScript / TypeScript' : 'Python')
   const registryLabel = isJS ? 'npm' : 'PyPI'
 
   function handleCopy() {
@@ -145,6 +148,127 @@ export default function CodeResultView({ codeResult }) {
               }}>
                 import {pkg}
               </code>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Slopsquatting / Suspicious Packages Alert */}
+      {codeResult.suspicious_packages && codeResult.suspicious_packages.length > 0 && (
+        <div style={{
+          background: 'rgba(234, 88, 12, 0.12)',
+          border: '1px solid rgba(234, 88, 12, 0.4)',
+          borderRadius: 'var(--radius-md)',
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ShieldAlert size={17} color="#fb923c" />
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              color: '#fb923c',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}>
+              Alerta de Slopsquatting (Dependencias Trampa)
+            </span>
+          </div>
+
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            Se detectaron paquetes registrados recientemente en {registryLabel} que coinciden con vectores de <strong>slopsquatting</strong> (paquetes trampa para capturar alucinaciones de IA e inyectar código malicioso):
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {codeResult.suspicious_packages.map(pkg => (
+              <code key={pkg} style={{
+                background: 'rgba(234, 88, 12, 0.2)',
+                color: '#fed7aa',
+                border: '1px solid rgba(234, 88, 12, 0.5)',
+                borderRadius: 'var(--radius-xs)',
+                padding: '4px 9px',
+                fontSize: '12px',
+                fontWeight: 600,
+                fontFamily: 'var(--font-mono)',
+              }}>
+                {pkg}
+              </code>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* OSV Vulnerabilities Alert */}
+      {codeResult.vulnerabilities_found && codeResult.vulnerabilities_found.length > 0 && (
+        <div style={{
+          background: 'rgba(220, 38, 38, 0.12)',
+          border: '1px solid rgba(220, 38, 38, 0.45)',
+          borderRadius: 'var(--radius-md)',
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ShieldAlert size={17} color="#f87171" />
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              color: '#f87171',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}>
+              Vulnerabilidades Críticas Detectadas (OSV / CVE)
+            </span>
+          </div>
+
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            La base de datos de seguridad Open Source Vulnerabilities (OSV) reportó avisos activos para las dependencias importadas:
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {codeResult.vulnerabilities_found.map((v, i) => (
+              <div key={i} style={{
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid rgba(220, 38, 38, 0.3)',
+                borderRadius: 'var(--radius-xs)',
+                padding: '8px 12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}>
+                <div>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#fca5a5',
+                    fontFamily: 'var(--font-mono)',
+                    marginRight: 8,
+                  }}>
+                    {v.package} ({v.id})
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                    {v.summary}
+                  </span>
+                </div>
+                <a
+                  href={`https://osv.dev/vulnerability/${v.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    fontSize: '11px',
+                    color: '#93c5fd',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  Ver CVE &rarr;
+                </a>
+              </div>
             ))}
           </div>
         </div>

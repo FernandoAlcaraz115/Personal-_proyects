@@ -1,23 +1,28 @@
 """
-CodeHallucinationDetector — Identifies hallucinations in source code (Python & JavaScript/TypeScript).
+CodeHallucinationDetector — Identifies hallucinations in source code (Python, JavaScript/TypeScript & SQL).
 
 Detects:
 1. Syntax / AST parsing errors with exact line numbers.
-2. Hallucinated / ghost packages on PyPI and npm registries (detecting slopsquatting vectors).
-3. Fabricated methods and APIs in Python stdlib and JavaScript/Node.js runtime.
-4. AI-powered code correction and explanation.
+2. Hallucinated / ghost packages on PyPI and npm registries.
+3. Slopsquatting vectors (newly minted packages, low downloads/versions trapping LLM hallucinations).
+4. Known CVEs and security advisories via OSV (Open Source Vulnerabilities) API.
+5. Fabricated methods and APIs in Python stdlib, JavaScript runtime and SQL dialects.
+6. SQL security hazards (destructive UPDATE/DELETE without WHERE, SQL injection patterns).
+7. AI-powered code correction and explanation.
 """
 from __future__ import annotations
 import ast
 import sys
 import re
-from typing import List, Dict, Optional, Set
+from datetime import datetime, timezone
+from typing import List, Dict, Optional, Set, Any
 import httpx
 from pydantic import BaseModel, Field
 
 # Cache to avoid repetitive network calls
-_PYPI_CACHE: Dict[str, bool] = {}
-_NPM_CACHE: Dict[str, bool] = {}
+_PYPI_CACHE: Dict[str, Dict[str, Any]] = {}
+_NPM_CACHE: Dict[str, Dict[str, Any]] = {}
+_OSV_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 
 # Set of standard library modules in current Python runtime
 _STDLIB_MODULES: Set[str] = getattr(sys, "stdlib_module_names", set())
@@ -109,6 +114,16 @@ _KNOWN_HALLUCINATED_JS_APIS = [
     (r"\bString\.prototype\.capitalize\b|\b\.capitalize\(\)", ".capitalize() no es un método nativo de String en JS estándar."),
 ]
 
+# Catalog of dialect-incompatible and frequently hallucinated SQL functions/syntax
+_KNOWN_HALLUCINATED_SQL_PATTERNS = [
+    (r"\bDATEDIFF\s*\(", "DATEDIFF() es específico de SQL Server/MySQL. En PostgreSQL utiliza resta directa o AGE()."),
+    (r"\bGROUP_CONCAT\s*\(", "GROUP_CONCAT() es de MySQL/SQLite. En PostgreSQL y ANSI estándar se utiliza STRING_AGG()."),
+    (r"\bNVL\s*\(", "NVL() es exclusivo de Oracle. En estándares ANSI SQL universales usa COALESCE()."),
+    (r"\bIFNULL\s*\(", "IFNULL() es específico de MySQL/SQLite. Para máxima compatibilidad SQL utiliza COALESCE()."),
+    (r"\bROWNUM\b", "ROWNUM es exclusivo de Oracle. En ANSI SQL moderno usa LIMIT/OFFSET o ROW_NUMBER() OVER()."),
+    (r"\bSELECT\s+TOP\s+\d+\b", "SELECT TOP n es específico de SQL Server/MS Access. En PostgreSQL/MySQL/SQLite usa LIMIT."),
+]
+
 from app.models.analysis import CodeIssue, CodeAnalysisResult
 
 
@@ -121,6 +136,21 @@ class CodeHallucinationDetector:
             return "javascript"
         if language_hint in ("python", "py"):
             return "python"
+        if language_hint in ("sql", "psql", "mysql", "sqlite"):
+            return "sql"
+
+        sql_markers = [
+            r"\bSELECT\s+[\s\S]+?\s+FROM\b",
+            r"\bINSERT\s+INTO\s+[a-zA-Z_]\w*",
+            r"\bUPDATE\s+[a-zA-Z_]\w*\s+SET\b",
+            r"\bDELETE\s+FROM\s+[a-zA-Z_]\w*",
+            r"\bCREATE\s+TABLE\b",
+            r"\bALTER\s+TABLE\b",
+            r"\bDROP\s+TABLE\b",
+        ]
+        sql_score = sum(1 for p in sql_markers if re.search(p, code, re.IGNORECASE))
+        if sql_score >= 1 and not re.search(r"\b(?:def|class|import|const|let|function)\b", code):
+            return "sql"
 
         js_markers = [
             r"\b(const|let|var)\s+\w+",
@@ -147,7 +177,20 @@ class CodeHallucinationDetector:
         js_score = sum(1 for p in js_markers if re.search(p, code, re.MULTILINE))
         py_score = sum(1 for p in py_markers if re.search(p, code, re.MULTILINE))
 
+        if sql_score > js_score and sql_score > py_score:
+            return "sql"
+
         return "javascript" if js_score > py_score else "python"
+
+    def _extract_markdown_code(self, text: str) -> tuple[str, Optional[str]]:
+        """Extracts raw code and optional language hint from Markdown fenced code blocks."""
+        match = re.search(r"```([a-zA-Z0-9_+-]*)\s*\n([\s\S]*?)```", text)
+        if match:
+            fence_lang = match.group(1).strip().lower() or None
+            inner_code = match.group(2).strip()
+            if inner_code:
+                return inner_code, fence_lang
+        return text, None
 
     async def analyze(
         self,
@@ -159,9 +202,12 @@ class CodeHallucinationDetector:
         llm_provider: str = "ollama",
         model: str = "llama3.2",
     ) -> CodeAnalysisResult:
-        """Analyzes code snippet in Python or JavaScript/TypeScript."""
+        """Analyzes code snippet in Python, JavaScript/TypeScript or SQL."""
         code = code.strip()
-        detected_lang = self.detect_language(code, language)
+        extracted_code, fence_lang = self._extract_markdown_code(code)
+        code = extracted_code
+        effective_hint = fence_lang if (language == "auto" and fence_lang) else language
+        detected_lang = self.detect_language(code, effective_hint)
 
         if not code:
             return CodeAnalysisResult(
@@ -175,6 +221,15 @@ class CodeHallucinationDetector:
                     symbol="EMPTY_CODE",
                     message="El código proporcionado está vacío.",
                 )]
+            )
+
+        if detected_lang == "sql":
+            return await self._analyze_sql(
+                code=code,
+                ai_correction=ai_correction,
+                llm_client=llm_client,
+                llm_provider=llm_provider,
+                model=model,
             )
 
         if detected_lang == "javascript":
@@ -210,6 +265,8 @@ class CodeHallucinationDetector:
     ) -> CodeAnalysisResult:
         issues: List[CodeIssue] = []
         hallucinated_pkgs: List[str] = []
+        suspicious_pkgs: List[str] = []
+        vulns_found: List[Dict[str, Any]] = []
         ast_metrics: Dict[str, int] = {}
         is_valid_syntax = True
 
@@ -237,8 +294,8 @@ class CodeHallucinationDetector:
                     continue
 
                 if check_pypi:
-                    exists = await self._verify_pypi_package(root_pkg)
-                    if not exists:
+                    pkg_info = await self._verify_pypi_package_deep(root_pkg)
+                    if not pkg_info["exists"]:
                         hallucinated_pkgs.append(root_pkg)
                         issues.append(CodeIssue(
                             category="hallucinated_package",
@@ -248,6 +305,27 @@ class CodeHallucinationDetector:
                             message=f"Librería alucinada: '{root_pkg}' no existe en la librería estándar ni en el registro PyPI.",
                             suggestion=f"Verifica el nombre del paquete o busca alternativas verificadas en PyPI.",
                         ))
+                    else:
+                        if pkg_info.get("is_slopsquatting"):
+                            suspicious_pkgs.append(root_pkg)
+                            issues.append(CodeIssue(
+                                category="slopsquatting",
+                                severity="high",
+                                line_number=mod_info["line"],
+                                symbol=root_pkg,
+                                message=f"Alerta de Slopsquatting: {pkg_info['reason']}",
+                                suggestion=f"Investiga el repositorio del paquete en PyPI antes de instalar '{root_pkg}'.",
+                            ))
+                        for v in pkg_info.get("vulnerabilities", []):
+                            vulns_found.append({"package": root_pkg, "ecosystem": "PyPI", **v})
+                            issues.append(CodeIssue(
+                                category="vulnerability",
+                                severity="high",
+                                line_number=mod_info["line"],
+                                symbol=f"{root_pkg} ({v.get('id')})",
+                                message=f"Vulnerabilidad detectada en '{root_pkg}': {v.get('summary', 'Aviso de seguridad')}",
+                                suggestion=f"Aviso de seguridad OSV: https://osv.dev/vulnerability/{v.get('id')}",
+                            ))
 
             api_issues = self._check_hallucinated_python_apis(tree)
             issues.extend(api_issues)
@@ -273,6 +351,8 @@ class CodeHallucinationDetector:
             risk_level=risk,
             issues=issues,
             hallucinated_packages=hallucinated_pkgs,
+            suspicious_packages=suspicious_pkgs,
+            vulnerabilities_found=vulns_found,
             ast_metrics=ast_metrics,
             corrected_code=corrected_code,
             ai_explanation=ai_explanation,
@@ -292,6 +372,8 @@ class CodeHallucinationDetector:
     ) -> CodeAnalysisResult:
         issues: List[CodeIssue] = []
         hallucinated_pkgs: List[str] = []
+        suspicious_pkgs: List[str] = []
+        vulns_found: List[Dict[str, Any]] = []
         is_valid_syntax = True
 
         # 1. Structural balance check (braces, parens, quotes)
@@ -316,17 +398,38 @@ class CodeHallucinationDetector:
                 continue
 
             if check_npm:
-                exists = await self._verify_npm_package(root_pkg)
-                if not exists:
+                pkg_info = await self._verify_npm_package_deep(root_pkg)
+                if not pkg_info["exists"]:
                     hallucinated_pkgs.append(root_pkg)
                     issues.append(CodeIssue(
                         category="hallucinated_package",
                         severity="high",
                         line_number=imp["line"],
                         symbol=root_pkg,
-                        message=f"Librería alucinada en npm (Riesgo de Slopsquatting): '{root_pkg}' no existe en el registro oficial de npm.",
+                        message=f"Librería alucinada en npm: '{root_pkg}' no existe en el registro oficial de npm.",
                         suggestion="Verifica el nombre del paquete en npmjs.com o comprueba la ortografía.",
                     ))
+                else:
+                    if pkg_info.get("is_slopsquatting"):
+                        suspicious_pkgs.append(root_pkg)
+                        issues.append(CodeIssue(
+                            category="slopsquatting",
+                            severity="high",
+                            line_number=imp["line"],
+                            symbol=root_pkg,
+                            message=f"Alerta de Slopsquatting en npm: {pkg_info['reason']}",
+                            suggestion=f"Revisa npmjs.com/package/{root_pkg} y el repositorio oficial antes de instalar.",
+                        ))
+                    for v in pkg_info.get("vulnerabilities", []):
+                        vulns_found.append({"package": root_pkg, "ecosystem": "npm", **v})
+                        issues.append(CodeIssue(
+                            category="vulnerability",
+                            severity="high",
+                            line_number=imp["line"],
+                            symbol=f"{root_pkg} ({v.get('id')})",
+                            message=f"Vulnerabilidad detectada en '{root_pkg}': {v.get('summary', 'Aviso de seguridad')}",
+                            suggestion=f"Aviso de seguridad OSV: https://osv.dev/vulnerability/{v.get('id')}",
+                        ))
 
         # 3. Detect known hallucinated Web / JS APIs
         lines = code.split("\n")
@@ -372,7 +475,189 @@ class CodeHallucinationDetector:
             risk_level=risk,
             issues=issues,
             hallucinated_packages=hallucinated_pkgs,
+            suspicious_packages=suspicious_pkgs,
+            vulnerabilities_found=vulns_found,
             ast_metrics=ast_metrics,
+            corrected_code=corrected_code,
+            ai_explanation=ai_explanation,
+        )
+
+    # -------------------------------------------------------------
+    # SQL Analysis Engine (Syntax, Dialects & Operational Hazards)
+    # -------------------------------------------------------------
+    async def _analyze_sql(
+        self,
+        code: str,
+        ai_correction: bool,
+        llm_client,
+        llm_provider: str,
+        model: str = "llama3.2",
+    ) -> CodeAnalysisResult:
+        issues: List[CodeIssue] = []
+        is_valid_syntax = True
+        lines = code.split("\n")
+
+        # 1. Quote balance validation
+        in_single_quote = False
+        in_double_quote = False
+        for line_idx, line in enumerate(lines, 1):
+            clean = re.sub(r"--.*$", "", line)
+            i = 0
+            while i < len(clean):
+                ch = clean[i]
+                if ch == "'" and not in_double_quote:
+                    if i + 1 < len(clean) and clean[i + 1] == "'":
+                        i += 1
+                    else:
+                        in_single_quote = not in_single_quote
+                elif ch == '"' and not in_single_quote:
+                    if i + 1 < len(clean) and clean[i + 1] == '"':
+                        i += 1
+                    else:
+                        in_double_quote = not in_double_quote
+                i += 1
+
+        if in_single_quote or in_double_quote:
+            is_valid_syntax = False
+            quote_type = "simple ('')" if in_single_quote else 'doble ("")'
+            issues.append(CodeIssue(
+                category="syntax",
+                severity="high",
+                symbol="UNCLOSED_QUOTE",
+                message=f"Error de sintaxis SQL: Comilla {quote_type} sin cerrar.",
+                suggestion="Verifica que todas las cadenas de texto SQL tengan comillas de cierre correspondientes.",
+            ))
+
+        # 2. Parenthesis balance validation
+        paren_stack = []
+        for line_idx, line in enumerate(lines, 1):
+            clean = re.sub(r"--.*$", "", line)
+            for col_idx, ch in enumerate(clean, 1):
+                if ch == "(":
+                    paren_stack.append((line_idx, col_idx))
+                elif ch == ")":
+                    if not paren_stack:
+                        is_valid_syntax = False
+                        issues.append(CodeIssue(
+                            category="syntax",
+                            severity="high",
+                            line_number=line_idx,
+                            column=col_idx,
+                            symbol=")",
+                            message="Error de sintaxis SQL: Paréntesis de cierre ')' inesperado.",
+                            suggestion="Revisa los paréntesis en subconsultas o funciones agregadas.",
+                        ))
+                    else:
+                        paren_stack.pop()
+        if paren_stack:
+            is_valid_syntax = False
+            l_no, c_no = paren_stack[-1]
+            issues.append(CodeIssue(
+                category="syntax",
+                severity="high",
+                line_number=l_no,
+                column=c_no,
+                symbol="(",
+                message="Error de sintaxis SQL: Paréntesis de apertura '(' sin cerrar.",
+                suggestion="Cierra el paréntesis de la subconsulta o cláusula.",
+            ))
+
+        # 3. Critical Operational & Security Hallucinations
+        # Check UPDATE or DELETE without WHERE (Dangerous accidental wipe)
+        has_destructive = bool(re.search(r"\b(?:DELETE\s+FROM|UPDATE\s+[a-zA-Z_]\w*\s+SET)\b", code, re.IGNORECASE))
+        has_where = bool(re.search(r"\bWHERE\b", code, re.IGNORECASE))
+        if has_destructive and not has_where:
+            issues.append(CodeIssue(
+                category="security",
+                severity="high",
+                symbol="NO_WHERE_CLAUSE",
+                message="Riesgo crítico de seguridad/operación: Sentencia UPDATE o DELETE sin cláusula WHERE (modificará o borrará la totalidad de la tabla).",
+                suggestion="Añade una condición WHERE para delimitar los registros afectados.",
+            ))
+
+        for line_idx, line in enumerate(lines, 1):
+            clean = re.sub(r"--.*$", "", line).strip()
+
+            # SQL Injection vulnerability patterns in generated code
+            if re.search(r"f['\"].*SELECT.*\{.*\}", line, re.IGNORECASE) or re.search(r"['\"]\s*\+\s*[a-zA-Z_]\w*\s*\+\s*['\"]", line):
+                issues.append(CodeIssue(
+                    category="security",
+                    severity="high",
+                    line_number=line_idx,
+                    symbol="SQL_INJECTION_PATTERN",
+                    message="Riesgo de Inyección SQL: Se detectó concatenación directa de variables o f-strings en la consulta SQL generada.",
+                    suggestion="Utiliza parámetros enlazados (placeholders con ?, %s o :param) en vez de interpolar cadenas.",
+                ))
+
+            # Comma immediately before FROM (common syntax hallucination)
+            if re.search(r",\s*FROM\b", line, re.IGNORECASE):
+                is_valid_syntax = False
+                issues.append(CodeIssue(
+                    category="syntax",
+                    severity="high",
+                    line_number=line_idx,
+                    symbol=", FROM",
+                    message="Error de sintaxis SQL: Coma sobrante antes de la cláusula FROM.",
+                    suggestion="Elimina la coma final en la lista de columnas seleccionadas.",
+                ))
+
+            # Multiple WHERE keywords in same query
+            if len(re.findall(r"\bWHERE\b", clean, re.IGNORECASE)) > 1:
+                is_valid_syntax = False
+                issues.append(CodeIssue(
+                    category="syntax",
+                    severity="high",
+                    line_number=line_idx,
+                    symbol="DUPLICATE_WHERE",
+                    message="Error de sintaxis SQL: Múltiples cláusulas WHERE en la misma consulta.",
+                    suggestion="Encadena condiciones usando AND u OR en lugar de repetir la palabra WHERE.",
+                ))
+
+            # Dialect-specific hallucinated functions
+            for pattern, explanation in _KNOWN_HALLUCINATED_SQL_PATTERNS:
+                match = re.search(pattern, line, re.IGNORECASE)
+                if match:
+                    issues.append(CodeIssue(
+                        category="hallucinated_api",
+                        severity="medium",
+                        line_number=line_idx,
+                        symbol=match.group(0).strip(),
+                        message=f"Función SQL específica de dialecto o inconsistente: {explanation}",
+                        suggestion="Adapta la función al motor de base de datos objetivo o usa estándares ANSI SQL.",
+                    ))
+
+        # Metrics for SQL
+        table_matches = re.findall(r"\b(?:FROM|JOIN|INTO|UPDATE)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code, re.IGNORECASE)
+        unique_tables = list(set(t.lower() for t in table_matches))
+        sql_metrics = {
+            "statements": len(re.findall(r"\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b", code, re.IGNORECASE)),
+            "tables_referenced": len(unique_tables),
+            "joins": len(re.findall(r"\bJOIN\b", code, re.IGNORECASE)),
+            "where_conditions": len(re.findall(r"\bWHERE\b", code, re.IGNORECASE)),
+        }
+
+        confidence, risk = self._calculate_score(is_valid_syntax, issues)
+
+        corrected_code = None
+        ai_explanation = None
+        if ai_correction and llm_client and issues:
+            corrected_code, ai_explanation = await self._generate_ai_correction(
+                code=code,
+                language="SQL",
+                issues=issues,
+                llm_client=llm_client,
+                provider=llm_provider,
+                model=model,
+            )
+
+        return CodeAnalysisResult(
+            language="sql",
+            is_valid_syntax=is_valid_syntax,
+            confidence_score=confidence,
+            risk_level=risk,
+            issues=issues,
+            ast_metrics=sql_metrics,
+            sql_metrics=sql_metrics,
             corrected_code=corrected_code,
             ai_explanation=ai_explanation,
         )
@@ -488,33 +773,145 @@ class CodeHallucinationDetector:
             "calls": calls,
         }
 
-    async def _verify_pypi_package(self, package_name: str) -> bool:
+    async def _check_osv_vulnerabilities(self, package_name: str, ecosystem: str) -> List[Dict[str, Any]]:
+        cache_key = f"{ecosystem}:{package_name}"
+        if cache_key in _OSV_CACHE:
+            return _OSV_CACHE[cache_key]
+
+        vulns_list = []
+        try:
+            url = "https://api.osv.dev/v1/query"
+            payload = {"package": {"name": package_name, "ecosystem": ecosystem}}
+            res = await self._http_client.post(url, json=payload)
+            if res.status_code == 200:
+                data = res.json()
+                for v in data.get("vulns", [])[:3]:
+                    vulns_list.append({
+                        "id": v.get("id"),
+                        "summary": v.get("summary") or (v.get("details", "")[:120] if v.get("details") else "Aviso de seguridad"),
+                    })
+        except Exception:
+            pass
+
+        _OSV_CACHE[cache_key] = vulns_list
+        return vulns_list
+
+    async def _verify_pypi_package_deep(self, package_name: str) -> Dict[str, Any]:
         norm_name = package_name.lower().replace("_", "-")
         if norm_name in _PYPI_CACHE:
             return _PYPI_CACHE[norm_name]
 
+        result = {
+            "exists": True,
+            "is_slopsquatting": False,
+            "reason": None,
+            "vulnerabilities": []
+        }
         try:
             url = f"https://pypi.org/pypi/{norm_name}/json"
             res = await self._http_client.get(url)
-            exists = res.status_code == 200
-            _PYPI_CACHE[norm_name] = exists
-            return exists
-        except Exception:
-            return True
+            if res.status_code == 404:
+                result["exists"] = False
+                _PYPI_CACHE[norm_name] = result
+                return result
+            elif res.status_code != 200:
+                result["exists"] = True
+                _PYPI_CACHE[norm_name] = result
+                return result
 
-    async def _verify_npm_package(self, package_name: str) -> bool:
+            data = res.json()
+            info = data.get("info", {})
+            releases = data.get("releases", {})
+
+            now = datetime.now(timezone.utc)
+            first_upload_dt = None
+            for ver, files in releases.items():
+                for f in files:
+                    upload_time = f.get("upload_time_iso_8601") or f.get("upload_time")
+                    if upload_time:
+                        try:
+                            clean_time = upload_time.replace("Z", "+00:00")
+                            dt = datetime.fromisoformat(clean_time)
+                            if dt.tzinfo is None:
+                                dt = dt.replace(tzinfo=timezone.utc)
+                            if first_upload_dt is None or dt < first_upload_dt:
+                                first_upload_dt = dt
+                        except Exception:
+                            pass
+
+            if first_upload_dt:
+                age_days = max(0, (now - first_upload_dt).days)
+                num_releases = len(releases)
+                summary = (info.get("summary") or "").strip()
+                if age_days <= 45 and (num_releases <= 2 or len(summary) < 15):
+                    result["is_slopsquatting"] = True
+                    result["reason"] = f"Paquete registrado en PyPI hace solo {age_days} días con {num_releases} versión(es). Alto riesgo de Slopsquatting para interceptar alucinaciones de IA."
+
+            # Check OSV vulnerabilities
+            vulns = await self._check_osv_vulnerabilities(norm_name, "PyPI")
+            result["vulnerabilities"] = vulns
+
+            _PYPI_CACHE[norm_name] = result
+            return result
+        except Exception:
+            result["exists"] = True
+            return result
+
+    async def _verify_npm_package_deep(self, package_name: str) -> Dict[str, Any]:
         norm_name = package_name.lower().strip()
         if norm_name in _NPM_CACHE:
             return _NPM_CACHE[norm_name]
 
+        result = {
+            "exists": True,
+            "is_slopsquatting": False,
+            "reason": None,
+            "vulnerabilities": []
+        }
         try:
             url = f"https://registry.npmjs.org/{norm_name}"
             res = await self._http_client.get(url)
-            exists = res.status_code == 200
-            _NPM_CACHE[norm_name] = exists
-            return exists
+            if res.status_code == 404:
+                result["exists"] = False
+                _NPM_CACHE[norm_name] = result
+                return result
+            elif res.status_code != 200:
+                result["exists"] = True
+                _NPM_CACHE[norm_name] = result
+                return result
+
+            data = res.json()
+            time_data = data.get("time", {})
+            created_str = time_data.get("created")
+            if created_str:
+                try:
+                    dt = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    age_days = max(0, (datetime.now(timezone.utc) - dt).days)
+                    versions_count = len(data.get("versions", {}))
+                    if age_days <= 45 and versions_count <= 2:
+                        result["is_slopsquatting"] = True
+                        result["reason"] = f"Paquete registrado en npm hace solo {age_days} días con {versions_count} versión(es). Riesgo de Slopsquatting en npm."
+                except Exception:
+                    pass
+
+            vulns = await self._check_osv_vulnerabilities(norm_name, "npm")
+            result["vulnerabilities"] = vulns
+
+            _NPM_CACHE[norm_name] = result
+            return result
         except Exception:
-            return True
+            result["exists"] = True
+            return result
+
+    async def _verify_pypi_package(self, package_name: str) -> bool:
+        deep = await self._verify_pypi_package_deep(package_name)
+        return deep.get("exists", True)
+
+    async def _verify_npm_package(self, package_name: str) -> bool:
+        deep = await self._verify_npm_package_deep(package_name)
+        return deep.get("exists", True)
 
     def _calculate_score(self, is_valid_syntax: bool, issues: List[CodeIssue]) -> tuple[float, str]:
         if not is_valid_syntax:
@@ -522,7 +919,7 @@ class CodeHallucinationDetector:
 
         penalty = 0.0
         for issue in issues:
-            if issue.category in ("hallucinated_package", "hallucinated_api"):
+            if issue.category in ("hallucinated_package", "hallucinated_api", "slopsquatting", "vulnerability", "security"):
                 penalty += 0.60
             elif issue.severity == "high":
                 penalty += 0.45

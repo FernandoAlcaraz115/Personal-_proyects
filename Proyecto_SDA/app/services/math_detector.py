@@ -124,27 +124,105 @@ class MathHallucinationDetector:
             ai_explanation=ai_explanation,
         )
 
+    def _sanitize_latex_math(self, text: str) -> str:
+        """
+        Normalizes LaTeX, KaTeX and Unicode math symbols copied from ChatGPT/Claude/Gemini
+        into clean SymPy-parseable arithmetic/algebraic expressions.
+        """
+        s = text
+        # Strip zero-width & non-breaking spaces
+        s = s.replace("\u200b", "").replace("\u00a0", " ").replace("\ufeff", "")
+        # Strip LaTeX block/inline delimiters
+        s = re.sub(r"\\\[|\\\]|\\\(|\\\)|\$\$|\$", " ", s)
+        # Remove \left and \right sizing directives
+        s = re.sub(r"\\(?:left|right|big|Big|bigg|Bigg)\b", "", s)
+        # Unwrap \text{...}, \mathrm{...}, \mathbf{...}, \operatorname{...}
+        s = re.sub(r"\\(?:text|mathrm|mathbf|mathit|operatorname|boxed)\{([^{}]*)\}", r"\1", s)
+        # Convert \frac{a}{b} and \dfrac{a}{b} (iterate twice for nested fractions)
+        for _ in range(3):
+            s = re.sub(r"\\d?frac\{([^{}]+)\}\{([^{}]+)\}", r"((\1)/(\2))", s)
+        # Convert \sqrt{x} and \sqrt[n]{x}
+        s = re.sub(r"\\sqrt\[(\d+)\]\{([^{}]+)\}", r"((\2)**(1/\1))", s)
+        s = re.sub(r"\\sqrt\{([^{}]+)\}", r"sqrt(\1)", s)
+        # Replace LaTeX & Unicode operators
+        replacements = [
+            (r"\\times\b", "*"),
+            (r"\\cdot\b", "*"),
+            (r"\\div\b", "/"),
+            (r"\\approx\b", "="),
+            (r"\\equiv\b", "="),
+            (r"\\sin\b", "sin"),
+            (r"\\cos\b", "cos"),
+            (r"\\tan\b", "tan"),
+            (r"\\log\b", "log"),
+            (r"\\ln\b", "ln"),
+            (r"\\pi\b", "pi"),
+            (r"\\quad|\\qquad|\\,|\\;|\\!", " "),
+        ]
+        for pat, rep in replacements:
+            s = re.sub(pat, rep, s)
+
+        # Unicode math symbols from ChatGPT / browser copy-paste
+        unicode_map = {
+            "×": "*",
+            "·": "*",
+            "⋅": "*",
+            "÷": "/",
+            "−": "-",
+            "–": "-",
+            "—": "-",
+            "≈": "=",
+            "²": "^2",
+            "³": "^3",
+            "⁴": "^4",
+            "π": "pi",
+        }
+        for k, v in unicode_map.items():
+            s = s.replace(k, v)
+
+        # Convert Unicode square root √25 or √(x+1) -> sqrt(...)
+        s = re.sub(r"√\(([^)]+)\)", r"sqrt(\1)", s)
+        s = re.sub(r"√(\d+(?:\.\d+)?)", r"sqrt(\1)", s)
+
+        # Replace remaining braces used for exponents like x^{2} -> x^(2)
+        s = re.sub(r"\^\{([^{}]+)\}", r"^(\1)", s)
+        # Strip thousands separators in numbers (e.g. 1,081 -> 1081)
+        s = re.sub(r"(?<=\d),(?=\d{3}\b)", "", s)
+        return s
+
     def _extract_equations(self, text: str) -> List[Tuple[str, str, str]]:
-        """Finds equations containing '=' in text or LaTeX format."""
+        """Finds equations containing '=' in plain text, Markdown or LaTeX format."""
+        sanitized = self._sanitize_latex_math(text)
         equations = []
-        # Match lines or phrases containing an equal sign
-        # e.g., "12 * 8 = 96", "x^2 + 5 = 14", "23 + 45 = 68"
-        pattern = r"([a-zA-Z0-9\s\+\-\*\/\^\(\)\.\√]+)\s*=\s*([a-zA-Z0-9\s\+\-\*\/\^\(\)\.\√]+)"
-        
-        # Split text by lines or punctuation
-        candidates = re.split(r"[\n;,]+", text)
+        # Match lines or phrases containing one or more equal signs (supports chained equalities a = b = c)
+        expr_chars = r"[a-zA-Z0-9\s\+\-\*\/\^\(\)\.]+"
+        chain_pattern = re.compile(rf"({expr_chars}(?:=\s*{expr_chars})+)")
+
+        candidates = re.split(r"[\n;]+", sanitized)
         for cand in candidates:
             cand = cand.strip()
-            # Clean bullet points or prefixes like "Paso 1: ", "1. "
-            cand_clean = re.sub(r"^(paso\s*\d+:?|\d+[\.\)]\s*)", "", cand, flags=re.IGNORECASE).strip()
-            matches = list(re.finditer(pattern, cand_clean))
-            for m in matches:
-                lhs = m.group(1).strip()
-                rhs = m.group(2).strip()
-                # Basic validation that lhs and rhs contain math symbols or numbers
-                if any(c.isdigit() for c in lhs) or any(c.isdigit() for c in rhs):
-                    # Filter out non-mathematical assignments like "x = foo"
-                    if len(lhs) <= 60 and len(rhs) <= 60:
+            # Clean bullet points or prefixes like "Paso 1: ", "1. ", "- "
+            cand_clean = re.sub(r"^(?:[-*•]\s*)?(?:paso\s*\d+:?|step\s*\d+:?|\d+[\.\)]\s*)", "", cand, flags=re.IGNORECASE).strip()
+            for m in chain_pattern.finditer(cand_clean):
+                chain = m.group(1).strip()
+                parts = [p.strip() for p in chain.split("=") if p.strip()]
+                if len(parts) < 2:
+                    continue
+                for idx in range(len(parts) - 1):
+                    lhs = parts[idx].strip(" .:,")
+                    rhs = parts[idx + 1].strip(" .:,")
+                    # Strip leading prose words before math expression (e.g. "Resultado: 23 * 47")
+                    lhs_m = re.search(r"([a-zA-Z0-9\(\)\s\+\-\*\/\^\.]+)$", lhs)
+                    if lhs_m:
+                        lhs = lhs_m.group(1).strip()
+                    if not lhs or not rhs:
+                        continue
+                    if (any(c.isdigit() for c in lhs) or any(c.isdigit() for c in rhs)) and len(lhs) <= 80 and len(rhs) <= 80:
+                        # Avoid plain prose like "Step 1 = ..." without operators/math
+                        if not re.search(r"[\+\-\*\/\^\(\)]|\bsqrt\b|\bsin\b|\bcos\b", lhs + rhs) and not (
+                            re.fullmatch(r"[\d\.]+", lhs) and re.fullmatch(r"[\d\.]+", rhs)
+                        ):
+                            continue
                         raw = f"{lhs} = {rhs}"
                         equations.append((raw, lhs, rhs))
         return equations

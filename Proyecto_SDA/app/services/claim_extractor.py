@@ -3,32 +3,42 @@ Extracts atomic factual claims from a block of text.
 Uses spaCy when available; falls back to regex sentence splitting.
 """
 import re
-from typing import List
+from typing import List, Optional
 
-try:
-    import spacy
-    try:
-        _nlp = spacy.load("es_core_news_sm")
-    except Exception:
+_nlp = None
+_spacy_checked = False
+
+
+def _get_nlp():
+    global _nlp, _spacy_checked
+    if not _spacy_checked:
+        _spacy_checked = True
         try:
-            _nlp = spacy.load("en_core_web_sm")
+            import spacy
+            try:
+                _nlp = spacy.load("es_core_news_sm")
+            except Exception:
+                try:
+                    _nlp = spacy.load("en_core_web_sm")
+                except Exception:
+                    _nlp = None
         except Exception:
             _nlp = None
-except Exception:
-    _nlp = None
+    return _nlp
 
 
 class ClaimExtractor:
     def __init__(self):
-        self.nlp = _nlp
+        pass
 
     async def extract(self, text: str) -> List[str]:
-        if self.nlp:
-            return self._spacy_extract(text)
+        nlp = _get_nlp()
+        if nlp:
+            return self._spacy_extract(text, nlp)
         return self._regex_split(text)
 
-    def _spacy_extract(self, text: str) -> List[str]:
-        doc = self.nlp(text)
+    def _spacy_extract(self, text: str, nlp) -> List[str]:
+        doc = nlp(text)
         claims = []
         for sent in doc.sents:
             s = sent.text.strip()

@@ -11,17 +11,20 @@ import {
   UploadCloud,
   FileUp,
   FileText,
-  X
+  X,
+  Zap,
+  MessageSquareText
 } from 'lucide-react'
 
 export default function TextInput() {
   const {
-    mode, setMode, text, setText, provider, setProvider,
+    mode, setMode, inputMode, setInputMode, prompt, setPrompt,
+    text, setText, provider, setProvider,
     model, setModel, language, setLanguage,
     useExternal, setUseExternal,
     useCorrection, setUseCorrection,
     scSamples, setScSamples,
-    analyze, loading, reset,
+    analyze, liveAudit, loading, reset,
   } = useAnalysisStore()
 
   const t = translations[language] ?? translations.es
@@ -42,6 +45,12 @@ export default function TextInput() {
 
   function handleSubmit(e) {
     e.preventDefault()
+    if (inputMode === 'live') {
+      if (prompt.trim().length < 2) return
+      reset()
+      liveAudit()
+      return
+    }
     if (text.trim().length < 2) return
     reset()
     analyze()
@@ -61,7 +70,7 @@ export default function TextInput() {
 
         // Auto-detect mode by file extension
         const ext = file.name.split('.').pop()?.toLowerCase()
-        if (['py', 'pyw', 'ipynb'].includes(ext)) {
+        if (['py', 'pyw', 'ipynb', 'sql'].includes(ext)) {
           setMode('code')
         } else if (['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs'].includes(ext)) {
           setMode('code')
@@ -91,6 +100,173 @@ export default function TextInput() {
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
+      {/* Input Mode Switcher: Manual Paste vs Live LLM Interceptor */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 6,
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid var(--border-hairline)',
+        borderRadius: '8px',
+        padding: '3px',
+      }}>
+        <button
+          type="button"
+          onClick={() => setInputMode('manual')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            borderRadius: '6px',
+            fontSize: '11.5px',
+            fontWeight: inputMode === 'manual' ? 600 : 400,
+            color: inputMode === 'manual' ? '#ffffff' : 'var(--text-secondary)',
+            background: inputMode === 'manual' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            border: inputMode === 'manual' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
+            cursor: 'pointer',
+          }}
+        >
+          <MessageSquareText size={13} />
+          <span>Pegar Respuesta</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setInputMode('live')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            borderRadius: '6px',
+            fontSize: '11.5px',
+            fontWeight: inputMode === 'live' ? 600 : 400,
+            color: inputMode === 'live' ? '#ffffff' : 'var(--text-secondary)',
+            background: inputMode === 'live' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+            border: inputMode === 'live' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+            cursor: 'pointer',
+          }}
+        >
+          <Zap size={13} color={inputMode === 'live' ? '#34d399' : 'currentColor'} />
+          <span>Preguntar al LLM en Vivo</span>
+        </button>
+      </div>
+
+      {/* Live LLM Mode Prompt Box */}
+      {inputMode === 'live' && (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          background: 'rgba(16, 185, 129, 0.04)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          borderRadius: '10px',
+          padding: '12px 14px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Interceptor LLM en Tiempo Real ({provider} · {model})
+            </span>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <select
+                value={provider}
+                onChange={e => setProvider(e.target.value)}
+                style={{
+                  background: '#101012',
+                  border: '1px solid var(--border-hairline)',
+                  borderRadius: '5px',
+                  color: 'var(--text-main)',
+                  fontSize: '11px',
+                  padding: '3px 7px',
+                }}
+              >
+                <option value="ollama">Ollama (Local)</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini</option>
+              </select>
+              <input
+                type="text"
+                value={model}
+                onChange={e => setModel(e.target.value)}
+                placeholder="llama3.2"
+                style={{
+                  background: '#101012',
+                  border: '1px solid var(--border-hairline)',
+                  borderRadius: '5px',
+                  color: 'var(--text-main)',
+                  fontSize: '11px',
+                  padding: '3px 7px',
+                  fontFamily: 'var(--font-mono)',
+                  width: 92,
+                }}
+              />
+            </div>
+          </div>
+
+          <textarea
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            placeholder={
+              mode === 'code'
+                ? 'Ej: Escribe un script en Python para encriptar contraseñas o una consulta SQL para actualizar usuarios…'
+                : mode === 'math'
+                  ? 'Ej: Resuelve paso a paso: ¿cuánto es 23 * 47 + 19 y verifica la identidad sin(x)^2 + cos(x)^2?'
+                  : 'Ej: ¿Quién fundó Microsoft, en qué año y cuál es la capital de Australia?'
+            }
+            rows={3}
+            style={{
+              width: '100%',
+              background: '#0e0e11',
+              border: '1px solid var(--border-hairline)',
+              borderRadius: '8px',
+              color: 'var(--text-main)',
+              fontSize: '13px',
+              padding: '10px 12px',
+              resize: 'vertical',
+              lineHeight: 1.5,
+            }}
+          />
+
+          <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
+            Attestly consulta al modelo directamente (sin copiar/pegar ni fórmulas corruptas) y audita su respuesta al instante usando tu pregunta como contexto.
+          </p>
+        </div>
+      )}
+
+      {/* Optional Prompt Context Field in Manual Mode */}
+      {inputMode === 'manual' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <label style={{
+            fontSize: '10.5px',
+            fontWeight: 600,
+            color: 'var(--text-tertiary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}>
+            Pregunta / Contexto Original (Opcional)
+          </label>
+          <input
+            type="text"
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            placeholder="Ej: ¿Cuándo se fundó Microsoft? (ayuda a resolver sujetos implícitos y contexto)"
+            style={{
+              width: '100%',
+              background: '#111114',
+              border: '1px solid var(--border-hairline)',
+              borderRadius: '8px',
+              color: 'var(--text-main)',
+              fontSize: '12px',
+              padding: '8px 12px',
+              outline: 'none',
+            }}
+          />
+        </div>
+      )}
+
       {/* Raycast-style Presets bar */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -110,7 +286,7 @@ export default function TextInput() {
               ref={fileInputRef}
               onChange={e => handleFiles(e.target.files)}
               style={{ display: 'none' }}
-              accept=".py,.pyw,.js,.ts,.tsx,.jsx,.txt,.md,.json,.csv,.tex"
+              accept=".py,.pyw,.js,.ts,.tsx,.jsx,.sql,.txt,.md,.json,.csv,.tex"
             />
             <button
               type="button"
@@ -135,7 +311,7 @@ export default function TextInput() {
                 e.currentTarget.style.color = 'var(--text-secondary)'
                 e.currentTarget.style.borderColor = 'var(--border-hairline)'
               }}
-              title="Cargar archivo .py, .js, .txt, .json o .tex"
+              title="Cargar archivo .py, .js, .sql, .txt, .json o .tex"
             >
               <UploadCloud size={12} />
               <span>Cargar Archivo</span>
@@ -414,9 +590,9 @@ export default function TextInput() {
       {/* Raycast Primary Action Button */}
       <button
         type="submit"
-        disabled={loading || text.trim().length < 2}
+        disabled={loading || (inputMode === 'live' ? prompt.trim().length < 2 : text.trim().length < 2)}
         style={{
-          background: loading ? 'rgba(255, 255, 255, 0.05)' : '#ffffff',
+          background: loading ? 'rgba(255, 255, 255, 0.05)' : (inputMode === 'live' ? '#10b981' : '#ffffff'),
           color: loading ? 'var(--text-tertiary)' : '#000000',
           borderRadius: '8px',
           padding: '10px 16px',
@@ -427,21 +603,26 @@ export default function TextInput() {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          boxShadow: loading ? 'none' : '0 2px 10px rgba(255, 255, 255, 0.15)',
+          boxShadow: loading ? 'none' : (inputMode === 'live' ? '0 2px 12px rgba(16, 185, 129, 0.3)' : '0 2px 10px rgba(255, 255, 255, 0.15)'),
         }}
         onMouseEnter={e => {
-          if (!loading && text.trim().length >= 2) {
-            e.currentTarget.style.background = '#e6e6e6'
+          const canRun = inputMode === 'live' ? prompt.trim().length >= 2 : text.trim().length >= 2
+          if (!loading && canRun) {
+            e.currentTarget.style.background = inputMode === 'live' ? '#34d399' : '#e6e6e6'
           }
         }}
         onMouseLeave={e => {
           if (!loading) {
-            e.currentTarget.style.background = '#ffffff'
+            e.currentTarget.style.background = inputMode === 'live' ? '#10b981' : '#ffffff'
           }
         }}
       >
-        <Play size={13} fill={loading ? 'transparent' : '#000000'} />
-        <span>{loading ? t.btnAnalyzing : t.btnAnalyze}</span>
+        {inputMode === 'live' ? <Zap size={13} fill={loading ? 'transparent' : '#000000'} /> : <Play size={13} fill={loading ? 'transparent' : '#000000'} />}
+        <span>
+          {loading
+            ? t.btnAnalyzing
+            : (inputMode === 'live' ? 'Generar y Auditar en Vivo ⚡' : t.btnAnalyze)}
+        </span>
       </button>
 
     </form>

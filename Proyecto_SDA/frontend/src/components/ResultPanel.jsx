@@ -119,8 +119,16 @@ export default function ResultPanel() {
             <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
               Dominio
             </span>
-            <p style={{ fontSize: '12.5px', fontWeight: 500, color: 'var(--text-secondary)', textTransform: 'capitalize', marginTop: 2 }}>
-              {result.mode === 'code' ? 'Código Fuente (Python)' : result.mode === 'math' ? 'Álgebra Simbólica (SymPy)' : 'Hechos y Afirmaciones (NLP)'}
+            <p style={{ fontSize: '12.5px', fontWeight: 500, color: 'var(--text-secondary)', marginTop: 2 }}>
+              {(result.mode === 'sql' || result.code_result?.language === 'sql')
+                ? 'Auditoría SQL (Sintaxis & Seguridad)'
+                : result.mode === 'code'
+                  ? (result.code_result?.language === 'javascript'
+                    ? 'Código Fuente (JavaScript / TypeScript)'
+                    : 'Código Fuente (Python AST & PyPI)')
+                  : result.mode === 'math'
+                    ? 'Álgebra Simbólica (SymPy)'
+                    : 'Hechos y Afirmaciones (NLP)'}
             </p>
           </div>
         </div>
@@ -156,6 +164,8 @@ export default function ResultPanel() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 8,
         padding: '8px 12px',
         background: 'rgba(255, 255, 255, 0.015)',
         border: '1px solid var(--border-hairline)',
@@ -166,7 +176,7 @@ export default function ResultPanel() {
           <Download size={13} />
           <span>Exportar Informe Oficial:</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
           <button
             onClick={() => downloadMarkdown(result)}
             title="Descargar informe completo en Markdown"
@@ -260,7 +270,7 @@ export default function ResultPanel() {
       </div>
 
       {/* Mode-Specific Views */}
-      {result.mode === 'code' && (
+      {(result.mode === 'code' || result.mode === 'sql') && (
         <CodeResultView codeResult={result.code_result} />
       )}
 
@@ -325,9 +335,9 @@ function LayerProgress({ mode, streamStep }) {
 
   const stepsMap = {
     code: [
-      { name: 'Análisis Sintáctico AST', detail: 'Parseando estructura de código…' },
-      { name: 'Registro de Paquetes PyPI', detail: 'Auditando existencia de dependencias…' },
-      { name: 'Firmas de APIs', detail: 'Comprobando métodos y llamadas estándar…' },
+      { name: 'Análisis Sintáctico y AST', detail: 'Parseando estructura de Python, JS o SQL…' },
+      { name: 'Registros, Slopsquatting & OSV', detail: 'Auditando PyPI/npm, CVEs y reglas de seguridad…' },
+      { name: 'Firmas de APIs y Dialectos', detail: 'Comprobando métodos y llamadas estándar…' },
       { name: 'Corrección con IA', detail: 'Generando parche asistido…' },
     ],
     math: [

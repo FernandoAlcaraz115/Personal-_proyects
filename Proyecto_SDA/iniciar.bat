@@ -4,7 +4,7 @@ color 0B
 
 echo.
 echo ==============================================================
-echo    ATTESTLY - Multi-Domain AI Hallucination Studio v2.0
+echo    ATTESTLY - Multi-Domain AI Hallucination Studio v2.5
 echo ==============================================================
 echo.
 

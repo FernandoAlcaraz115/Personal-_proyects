@@ -39,6 +39,36 @@ export default function App() {
   const t = translations[language] ?? translations.es
   const [showHow, setShowHow] = useState(false)
   const [isCommandOpen, setIsCommandOpen] = useState(false)
+  const [sysStatus, setSysStatus] = useState({ backend: 'checking', ollamaOnline: false, model: 'llama3.2' })
+
+  // Poll live backend & Ollama status for presentation readiness
+  useEffect(() => {
+    let active = true
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health/system')
+        if (!res.ok) throw new Error('offline')
+        const data = await res.json()
+        if (active) {
+          setSysStatus({
+            backend: 'online',
+            ollamaOnline: Boolean(data?.ollama?.online),
+            model: data?.ollama?.default_model || 'llama3.2',
+          })
+        }
+      } catch {
+        if (active) {
+          setSysStatus({ backend: 'offline', ollamaOnline: false, model: 'llama3.2' })
+        }
+      }
+    }
+    checkHealth()
+    const timer = setInterval(checkHealth, 30000)
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [])
 
   // Global keyboard shortcuts (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -65,7 +95,7 @@ export default function App() {
       label: t.modeCode, 
       Icon: Code2, 
       desc: t.modeCodeDesc, 
-      tag: 'Python AST' 
+      tag: 'AST · npm · SQL · OSV' 
     },
     { 
       id: 'math', 
@@ -134,7 +164,7 @@ export default function App() {
               padding: '1px 5px',
               borderRadius: '4px',
             }}>
-              v2.1
+              v2.5
             </span>
           </div>
         </div>
@@ -374,9 +404,31 @@ export default function App() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--status-success)' }} />
-              Motor Activo
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }} title="Estado del servidor FastAPI">
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: sysStatus.backend === 'online'
+                  ? 'var(--status-success)'
+                  : sysStatus.backend === 'offline'
+                    ? '#ef4444'
+                    : '#f59e0b',
+              }} />
+              {sysStatus.backend === 'online' ? 'API Online' : sysStatus.backend === 'offline' ? 'API Offline' : 'Conectando…'}
+            </span>
+            <span>·</span>
+            <span
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+              title={sysStatus.ollamaOnline ? `Ollama activo (${sysStatus.model})` : 'Ollama no detectado localmente. La detección sin IA sigue funcionando al 100%.'}
+            >
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: sysStatus.ollamaOnline ? '#10b981' : '#f59e0b',
+              }} />
+              {sysStatus.ollamaOnline ? `Ollama (${sysStatus.model})` : 'Ollama Offline'}
             </span>
             <span>·</span>
             <span>{activeModeInfo.tag}</span>
@@ -386,8 +438,8 @@ export default function App() {
         {/* Two Floating macOS Panels */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(420px, 1fr) minmax(460px, 1.15fr)',
-          gap: '20px',
+          gridTemplateColumns: 'minmax(340px, 1fr) minmax(380px, 1.15fr)',
+          gap: '18px',
           alignItems: 'start',
         }}>
 
@@ -534,16 +586,20 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
                 {
-                  title: '1. Dimensión Factual (NLP & Grounding)',
-                  desc: 'Aísla afirmaciones factuales y contrasta solapamiento léxico contra Wikipedia y fuentes web en tiempo real sin requerir acceso a los pesos internos del LLM.',
+                  title: '1. Dimensión Factual (NLP & Web Grounding)',
+                  desc: 'Aísla afirmaciones atómicas, detecta lenguaje dubitativo y contrasta hechos contra Wikipedia y DuckDuckGo en tiempo real sin requerir acceso a los pesos internos del LLM.',
                 },
                 {
-                  title: '2. Dimensión de Código (AST & PyPI)',
-                  desc: 'Inspecciona la estructura de código fuente, validando sintaxis formal y consultando el índice oficial de PyPI para detectar dependencias inventadas o métodos inexistentes.',
+                  title: '2. Dimensión de Código & Ciberseguridad (AST, PyPI, npm, OSV & SQL)',
+                  desc: 'Inspecciona Python, JavaScript/TypeScript y SQL: valida sintaxis, detecta librerías fantasma, alerta sobre trampas de Slopsquatting, consulta CVEs en OSV.dev y bloquea consultas SQL destructivas (DELETE/UPDATE sin WHERE).',
                 },
                 {
                   title: '3. Dimensión Matemática (SymPy Symbolic)',
-                  desc: 'Evalúa formalmente si LHS - RHS = 0 con álgebra simbólica exacta en SymPy, detectando alucinaciones aritméticas y pasos de deducción inválidos.',
+                  desc: 'Evalúa formalmente si LHS - RHS = 0 con álgebra simbólica exacta en SymPy, detectando alucinaciones aritméticas, porcentajes falsos y pasos de deducción inválidos.',
+                },
+                {
+                  title: '4. Experiencia DevOps (CLI & GitHub Actions)',
+                  desc: 'Incluye CLI nativa (attestly audit / scan) y flujo de CI/CD para auditar repositorios automáticamente y exportar certificados técnicos en PDF, Markdown y JSON.',
                 },
               ].map((item, idx) => (
                 <div key={idx} style={{

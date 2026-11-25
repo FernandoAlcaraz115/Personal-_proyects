@@ -1,6 +1,6 @@
-# 🧠 ATTESTLY — Multi-Domain AI Hallucination Studio
+# 🧠 ATTESTLY — Multi-Domain AI Hallucination & Security Studio
 
-Herramienta de auditoría y detección de alucinaciones en modelos de lenguaje grande (LLMs de caja negra) a través de tres dimensiones críticas: **Texto Fáctico**, **Código Fuente** y **Ecuaciones Matemáticas**.
+Herramienta de auditoría y detección de alucinaciones en modelos de lenguaje grande (LLMs de caja negra) a través de cuatro dimensiones críticas: **Texto Fáctico**, **Código Fuente**, **Seguridad & Slopsquatting / SQL**, y **Ecuaciones Matemáticas**, disponible tanto en **Web Studio** como en **CLI para CI/CD**.
 
 ---
 
@@ -12,17 +12,45 @@ Herramienta de auditoría y detección de alucinaciones en modelos de lenguaje g
 - **Capa 3 (Scorer Adaptativo)**: Ponderación de señales internas y externas con muestreo de auto-consistencia (*Self-Consistency*).
 - **Capa 4 (Corrección IA)**: Consulta al LLM con contexto para generar corrección explicada.
 
-### 2. 💻 Modo Código (Python AST & PyPI)
-- **Verificación Sintáctica**: Detección de errores de sintaxis y construcciones ilegales con número exacto de línea vía AST.
-- **Auditoría de Librerías Fantasma**: Comprueba si los paquetes importados existen en la biblioteca estándar de Python o en el registro oficial de PyPI.
+### 2. 💻 Modo Código (Python, JavaScript/TypeScript & SQL)
+- **Verificación Sintáctica**: Detección de errores de sintaxis y construcciones ilegales con número exacto de línea vía AST (Python) y balance de bloques (JS/SQL).
+- **Auditoría de Librerías Fantasma**: Comprueba si los paquetes importados existen en la biblioteca estándar o en los registros oficiales de **PyPI** y **npm**.
 - **Validación de APIs**: Detección de métodos o funciones alucinadas (ej. llamadas a métodos inexistentes en librerías estándar).
 - **Parche de Código con IA**: Generación opcional del código corregido y funcional.
 
-### 3. 🧮 Modo Matemáticas & Ecuaciones (SymPy Formal)
+### 3. 🛡️ Modo Ciberseguridad & Slopsquatting (PyPI, npm & OSV)
+- **Detección de Package Slopsquatting**: Analiza si una dependencia fue registrada recientemente (< 45 días) o presenta bajo volumen de versiones, alertando sobre paquetes trampa creados por atacantes para capturar alucinaciones de IA.
+- **Avisos de Vulnerabilidad (OSV API)**: Consulta en tiempo real a Open Source Vulnerabilities (`osv.dev`) para identificar CVEs activos en las dependencias sugeridas por el LLM.
+- **Auditoría SQL**: Detecta sentencias destructivas (`DELETE` o `UPDATE` sin `WHERE`), patrones de inyección SQL (concatenaciones directas de cadenas) y discrepancias dialectales (`DATEDIFF`, `GROUP_CONCAT`, `NVL`).
+
+### 4. 🧮 Modo Matemáticas & Ecuaciones (SymPy Formal)
 - **Extracción de Ecuaciones**: Identifica igualdades aritméticas, porcentajes y pasos de deducción paso a paso.
 - **Evaluación Simbólica y Numérica**: Verifica mediante el motor formal SymPy si $LHS - RHS = 0$.
 - **Cálculo de Discrepancia**: Indica la magnitud exacta del error y el valor real esperado.
 - **Solución Formal**: Generación de la resolución paso a paso corregida.
+
+---
+
+## ⚡ Attestly CLI (Auditoría en Terminal & CI/CD)
+
+Attestly incluye una CLI nativa que permite auditar código, consultas SQL y textos directamente desde la terminal o integrarlo en flujos de integración continua:
+
+```bash
+# Auditar un archivo específico (Python, JS, SQL, Matemáticas)
+python -m app.cli audit script.py --fail-on high
+
+# Auditar una consulta SQL directamente
+python -m app.cli audit -t "DELETE FROM usuarios;" -m sql
+
+# Escanear un repositorio completo de código de forma recursiva
+python -m app.cli scan . --format table --fail-on high
+
+# Exportar resultados en JSON estructurado para scripts o tuberías
+python -m app.cli audit script.py --format json
+```
+
+### 🤖 Integración en GitHub Actions
+El proyecto incluye un workflow en `.github/workflows/attestly-audit.yml` para bloquear automáticamente Pull Requests que introduzcan librerías fantasma, trampas de slopsquatting o errores sintácticos en código generado por asistentes de IA.
 
 ---
 

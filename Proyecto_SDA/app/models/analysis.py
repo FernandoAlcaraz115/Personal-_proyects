@@ -14,10 +14,23 @@ class AnalysisMode(str, Enum):
     text = "text"
     code = "code"
     math = "math"
+    sql = "sql"
 
 
 class AnalysisRequest(BaseModel):
     text: str = Field(..., min_length=2)
+    prompt: Optional[str] = None
+    mode: AnalysisMode = AnalysisMode.text
+    llm_provider: LLMProvider = LLMProvider.ollama
+    model: str = "llama3.2"
+    language: str = "es"
+    use_external_verification: bool = True
+    use_ai_correction: bool = False
+    self_consistency_samples: int = Field(1, ge=1, le=5)
+
+
+class LiveGenerateRequest(BaseModel):
+    prompt: str = Field(..., min_length=2)
     mode: AnalysisMode = AnalysisMode.text
     llm_provider: LLMProvider = LLMProvider.ollama
     model: str = "llama3.2"
@@ -41,6 +54,7 @@ class Layer2Result(BaseModel):
     verified: Optional[bool]
     confidence: float
     source: str
+    source_tier: str = "web"  # "academic" | "encyclopedic" | "web"
     snippet: str
     source_url: Optional[str] = None
 
@@ -81,7 +95,10 @@ class CodeAnalysisResult(BaseModel):
     risk_level: str
     issues: List[CodeIssue] = Field(default_factory=list)
     hallucinated_packages: List[str] = Field(default_factory=list)
+    suspicious_packages: List[str] = Field(default_factory=list)
+    vulnerabilities_found: List[Dict[str, Any]] = Field(default_factory=list)
     ast_metrics: Dict[str, int] = Field(default_factory=dict)
+    sql_metrics: Optional[Dict[str, Any]] = None
     corrected_code: Optional[str] = None
     ai_explanation: Optional[str] = None
 
@@ -120,6 +137,7 @@ class MathAnalysisResult(BaseModel):
 class AnalysisResponse(BaseModel):
     id: str
     mode: str = "text"
+    prompt: Optional[str] = None
     original_text: str
     overall_score: float
     risk_level: str = "low"

@@ -55,6 +55,20 @@ const BENCHMARK_DATASET = [
     sample: 'Paso 1: 15 + 27 = 42\nPaso 2: 42 * 2 = 84',
     expectedHallucination: false,
   },
+  {
+    id: 'BENCH-07',
+    mode: 'code',
+    title: 'SQL Destructivo sin WHERE (Peligro)',
+    sample: 'DELETE FROM usuarios;\nUPDATE cuentas SET saldo = 0;',
+    expectedHallucination: true,
+  },
+  {
+    id: 'BENCH-08',
+    mode: 'code',
+    title: 'Consulta SQL Segura y Válida',
+    sample: 'SELECT id, nombre FROM usuarios WHERE activo = 1;',
+    expectedHallucination: false,
+  },
 ]
 
 export default function BenchmarkModal({ isOpen, onClose }) {
@@ -81,7 +95,7 @@ export default function BenchmarkModal({ isOpen, onClose }) {
           self_consistency_samples: 1,
         })
 
-        const detectedHallucination = res.overall_score >= 0.50 || res.risk_level === 'high'
+        const detectedHallucination = res.risk_level === 'high' || res.overall_score < 0.60
         const isMatch = detectedHallucination === item.expectedHallucination
 
         evaluated.push({
@@ -220,7 +234,7 @@ export default function BenchmarkModal({ isOpen, onClose }) {
                 Batería de Validación Automatizada
               </p>
               <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: 2 }}>
-                Evalúa {BENCHMARK_DATASET.length} muestras de control calibradas (texto fáctico, PyPI, npm y SymPy).
+                Evalúa {BENCHMARK_DATASET.length} muestras de control calibradas (texto fáctico, PyPI, npm, SQL y SymPy).
               </p>
             </div>
             <button

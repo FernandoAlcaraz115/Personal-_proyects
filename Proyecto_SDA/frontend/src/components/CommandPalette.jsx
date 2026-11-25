@@ -80,8 +80,8 @@ export default function CommandPalette({ isOpen, onClose }) {
     {
       id: 'mode-code',
       category: 'Cambiar Motor',
-      title: 'Motor de Código Fuente',
-      subtitle: 'Inspección de AST y verificación en PyPI',
+      title: 'Motor de Código y Seguridad',
+      subtitle: 'Python AST, JS/npm, SQL, Slopsquatting & OSV',
       shortcut: '2',
       icon: Code2,
       action: () => {

@@ -41,12 +41,13 @@ class HallucinationDetector:
         req_mode = request.mode.value if isinstance(request.mode, AnalysisMode) else str(request.mode)
 
         # -------------------------------------------------------------
-        # Mode: Code Hallucination Detection
+        # Mode: Code & SQL Hallucination Detection
         # -------------------------------------------------------------
-        if req_mode == "code":
+        if req_mode in ("code", "sql"):
+            lang_hint = "sql" if req_mode == "sql" else "auto"
             code_res = await self.code_det.analyze(
                 code=request.text,
-                language="auto",
+                language=lang_hint,
                 check_pypi=request.use_external_verification,
                 ai_correction=request.use_ai_correction,
                 llm_client=self.llm,
@@ -54,15 +55,21 @@ class HallucinationDetector:
                 model=request.model,
             )
             elapsed_ms = int((time.time() - start) * 1000)
-            lang_label = "npm" if code_res.language == "javascript" else "pypi"
+            if code_res.language == "javascript":
+                lang_label = "npm"
+            elif code_res.language == "sql":
+                lang_label = "sql-linter"
+            else:
+                lang_label = "pypi+osv"
             return AnalysisResponse(
                 id=str(uuid.uuid4()),
-                mode="code",
+                mode=code_res.language if req_mode == "sql" else "code",
+                prompt=request.prompt,
                 original_text=request.text,
                 overall_score=code_res.confidence_score,
                 risk_level=code_res.risk_level,
                 processing_time_ms=elapsed_ms,
-                method_used=f"syntax+{lang_label}-verifier+api-validator" + ("+ai-fix" if request.use_ai_correction else ""),
+                method_used=f"syntax+{lang_label}+api-validator" + ("+ai-fix" if request.use_ai_correction else ""),
                 code_result=code_res,
             )
 
@@ -81,6 +88,7 @@ class HallucinationDetector:
             return AnalysisResponse(
                 id=str(uuid.uuid4()),
                 mode="math",
+                prompt=request.prompt,
                 original_text=request.text,
                 overall_score=math_res.confidence_score,
                 risk_level=math_res.risk_level,
@@ -109,7 +117,7 @@ class HallucinationDetector:
 
             l2 = None
             if request.use_external_verification:
-                l2 = await self.layer2.verify(claim, language=request.language)
+                l2 = await self.layer2.verify(claim, language=request.language, user_prompt=request.prompt)
             l2_items.append(l2)
 
             res = await self.layer3.score(
@@ -131,6 +139,8 @@ class HallucinationDetector:
                     provider=prov,
                     model=request.model,
                     language=request.language,
+                    user_prompt=request.prompt,
+                    source_name=l2_ref.source if l2_ref else "Authoritative Evidence",
                 )
                 if res.l4 and res.l4.is_hallucination and res.l4.explanation != "AI correction unavailable.":
                     res.confidence = round(min(res.confidence * 0.35, 0.40), 3)
@@ -157,6 +167,7 @@ class HallucinationDetector:
         return AnalysisResponse(
             id=str(uuid.uuid4()),
             mode="text",
+            prompt=request.prompt,
             original_text=request.text,
             claims=results,
             overall_score=overall,
@@ -169,32 +180,41 @@ class HallucinationDetector:
         start = time.time()
         req_mode = request.mode.value if isinstance(request.mode, AnalysisMode) else str(request.mode)
 
-        if req_mode == "code":
-            yield {"event": "layer_progress", "data": {"layer": 0, "name": "Análisis Sintáctico y Estructura", "detail": "Inspeccionando sintaxis y tokens..."}}
+        if req_mode in ("code", "sql"):
+            lang_hint = "sql" if req_mode == "sql" else "auto"
+            yield {"event": "layer_progress", "data": {"layer": 0, "name": "Análisis Sintáctico y Estructura", "detail": "Inspeccionando sintaxis, AST y estructura del código..."}}
             code_res = await self.code_det.analyze(
                 code=request.text,
-                language="auto",
+                language=lang_hint,
                 check_pypi=request.use_external_verification,
                 ai_correction=request.use_ai_correction,
                 llm_client=self.llm,
                 llm_provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
                 model=request.model,
             )
-            reg_name = "npm" if code_res.language == "javascript" else "PyPI"
-            yield {"event": "layer_progress", "data": {"layer": 1, "name": f"Registro de Paquetes ({reg_name})", "detail": f"Verificando dependencias en registro oficial {reg_name}..."}}
-            yield {"event": "layer_progress", "data": {"layer": 2, "name": "Firmas de APIs", "detail": "Comprobando métodos y llamadas estándar..."}}
+            if code_res.language == "sql":
+                yield {"event": "layer_progress", "data": {"layer": 1, "name": "Auditoría SQL y Seguridad", "detail": "Verificando cláusulas WHERE, inyección SQL y dialectos..."}}
+                yield {"event": "layer_progress", "data": {"layer": 2, "name": "Validación de Funciones SQL", "detail": "Comprobando compatibilidad ANSI SQL..."}}
+                lang_label = "sql-linter"
+            else:
+                reg_name = "npm" if code_res.language == "javascript" else "PyPI"
+                yield {"event": "layer_progress", "data": {"layer": 1, "name": f"Registro {reg_name}, Slopsquatting y OSV", "detail": f"Verificando dependencias en {reg_name} y vulnerabilidades CVE/OSV..."}}
+                yield {"event": "layer_progress", "data": {"layer": 2, "name": "Firmas de APIs", "detail": "Comprobando métodos y llamadas estándar..."}}
+                lang_label = "npm+osv" if code_res.language == "javascript" else "pypi+osv"
+
             if request.use_ai_correction:
                 yield {"event": "layer_progress", "data": {"layer": 3, "name": "Corrección con IA", "detail": "Generando parche..."}}
 
             elapsed_ms = int((time.time() - start) * 1000)
             res = AnalysisResponse(
                 id=str(uuid.uuid4()),
-                mode="code",
+                mode=code_res.language if req_mode == "sql" else "code",
+                prompt=request.prompt,
                 original_text=request.text,
                 overall_score=code_res.confidence_score,
                 risk_level=code_res.risk_level,
                 processing_time_ms=elapsed_ms,
-                method_used=f"syntax+{reg_name.lower()}-verifier+api-validator" + ("+ai-fix" if request.use_ai_correction else ""),
+                method_used=f"syntax+{lang_label}+api-validator" + ("+ai-fix" if request.use_ai_correction else ""),
                 code_result=code_res,
             )
             yield {"event": "final_result", "data": res.model_dump()}
@@ -218,6 +238,7 @@ class HallucinationDetector:
             res = AnalysisResponse(
                 id=str(uuid.uuid4()),
                 mode="math",
+                prompt=request.prompt,
                 original_text=request.text,
                 overall_score=math_res.confidence_score,
                 risk_level=math_res.risk_level,
@@ -240,14 +261,14 @@ class HallucinationDetector:
                 provider=request.llm_provider.value if hasattr(request.llm_provider, "value") else str(request.llm_provider),
             )
 
-        yield {"event": "layer_progress", "data": {"layer": 1, "name": "Grounding Wikipedia / Fuentes", "detail": f"Contrastando {len(claims_raw)} afirmaciones..."}}
+        yield {"event": "layer_progress", "data": {"layer": 1, "name": "Grounding Académico & Multi-Fuente", "detail": f"Contrastando {len(claims_raw)} afirmaciones en OpenAlex, Wikidata y fuentes institucionales..."}}
         results = []
         l2_items = []
         for claim in claims_raw:
             l1 = await self.layer1.analyze(claim)
             l2 = None
             if request.use_external_verification:
-                l2 = await self.layer2.verify(claim, language=request.language)
+                l2 = await self.layer2.verify(claim, language=request.language, user_prompt=request.prompt)
             l2_items.append(l2)
 
             res = await self.layer3.score(
@@ -271,6 +292,8 @@ class HallucinationDetector:
                     provider=prov,
                     model=request.model,
                     language=request.language,
+                    user_prompt=request.prompt,
+                    source_name=l2_ref.source if l2_ref else "Authoritative Evidence",
                 )
                 if res.l4 and res.l4.is_hallucination and res.l4.explanation != "AI correction unavailable.":
                     res.confidence = round(min(res.confidence * 0.35, 0.40), 3)
@@ -296,6 +319,7 @@ class HallucinationDetector:
         res = AnalysisResponse(
             id=str(uuid.uuid4()),
             mode="text",
+            prompt=request.prompt,
             original_text=request.text,
             claims=results,
             overall_score=overall,

@@ -156,16 +156,49 @@ export default function ClaimCard({ claim, index }) {
           flexDirection: 'column',
           gap: 6,
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              color: 'var(--brand-text)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}>
-              Fuente: {claim.l2.source}
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontFamily: 'var(--font-mono)',
+                textTransform: 'uppercase',
+                background: claim.l2.source_tier === 'academic'
+                  ? 'rgba(16, 185, 129, 0.14)'
+                  : claim.l2.source_tier === 'encyclopedic'
+                    ? 'rgba(56, 189, 248, 0.14)'
+                    : 'rgba(148, 163, 184, 0.14)',
+                color: claim.l2.source_tier === 'academic'
+                  ? '#34d399'
+                  : claim.l2.source_tier === 'encyclopedic'
+                    ? '#38bdf8'
+                    : 'var(--text-secondary)',
+                border: `1px solid ${
+                  claim.l2.source_tier === 'academic'
+                    ? 'rgba(16, 185, 129, 0.35)'
+                    : claim.l2.source_tier === 'encyclopedic'
+                      ? 'rgba(56, 189, 248, 0.35)'
+                      : 'rgba(148, 163, 184, 0.25)'
+                }`,
+              }}>
+                {claim.l2.source_tier === 'academic'
+                  ? 'Tier 1 · Académica'
+                  : claim.l2.source_tier === 'encyclopedic'
+                    ? 'Tier 2 · Knowledge Graph'
+                    : 'Tier 3 · Web'}
+              </span>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--brand-text)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}>
+                {claim.l2.source}
+              </span>
+            </div>
             {claim.l2.source_url && (
               <a
                 href={claim.l2.source_url}
@@ -180,7 +213,7 @@ export default function ClaimCard({ claim, index }) {
                   textDecoration: 'none',
                 }}
               >
-                <span>{t.wikiLink}</span>
+                <span>{claim.l2.source_url.includes('wikipedia.org') ? t.wikiLink : 'Ver fuente'}</span>
                 <ExternalLink size={11} />
               </a>
             )}

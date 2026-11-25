@@ -295,7 +295,7 @@ function CompareCard({ title, item, setItem, history, badge, badgeColor, t }) {
                 </strong>
               </span>
             )}
-            {item.mode === 'code' && item.code_result && (
+            {(item.mode === 'code' || item.mode === 'sql') && item.code_result && (
               <span>
                 Sintaxis AST: <strong>{item.code_result.is_valid_syntax ? 'Válida' : 'Con errores'}</strong> · Fantasma:{' '}
                 <strong style={{ color: 'var(--status-error-text)' }}>

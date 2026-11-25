@@ -46,10 +46,17 @@ class HallucinationCorrector:
         provider: str = "ollama",
         model: str = "llama3.2",
         language: str = "es",
+        user_prompt: str | None = None,
+        source_name: str = "Authoritative Evidence",
     ) -> CorrectionResult:
         lang_name = _LANG_NAME.get(language, "Spanish")
-        context   = f'Context from Wikipedia: "{wiki_snippet[:300]}"' if wiki_snippet else ""
-        prompt    = _PROMPT.format(
+        ctx_parts = []
+        if user_prompt and user_prompt.strip():
+            ctx_parts.append(f'Original user question: "{user_prompt.strip()[:250]}"')
+        if wiki_snippet:
+            ctx_parts.append(f'Evidence from {source_name}: "{wiki_snippet[:350]}"')
+        context = "\n".join(ctx_parts)
+        prompt = _PROMPT.format(
             lang_name=lang_name,
             claim=claim,
             context=context,
@@ -127,7 +134,6 @@ class HallucinationCorrector:
             },
         )
         res.raise_for_status()
-        return res.json()["choices"][0]["message"]["content"]
         return res.json()["choices"][0]["message"]["content"]
 
     async def _gemini(self, prompt: str) -> str:
